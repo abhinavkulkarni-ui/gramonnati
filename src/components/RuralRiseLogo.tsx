@@ -175,7 +175,7 @@ export default function RuralRiseLogo({
               Gramonnati
             </span>
             <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 border border-amber-500/30">
-              Rural Rise
+              RuralRise1
             </span>
           </div>
           <span 

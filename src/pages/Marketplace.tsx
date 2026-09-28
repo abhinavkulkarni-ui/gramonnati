@@ -427,7 +427,7 @@ export default function Marketplace() {
           </div>
         )}
 
-        {/* 6-Month Price Trends & AI Insights Grid */}
+        {/* 6-Month Price Trends & Agritech Advisory Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
           
           {/* Price Trends Chart */}
@@ -467,7 +467,7 @@ export default function Marketplace() {
             </div>
           </div>
 
-          {/* AI Market Advisory Box */}
+          {/* Market Advisory Box */}
           <div className="bg-[#183925] text-white rounded-3xl p-6 flex flex-col justify-between shadow-sm relative overflow-hidden">
             <div className="absolute top-0 right-0 w-48 h-48 bg-[#2d6a4f]/50 rounded-full blur-2xl pointer-events-none"></div>
 
@@ -475,7 +475,7 @@ export default function Marketplace() {
               <div className="flex items-center justify-between border-b border-white/10 pb-3">
                 <span className="text-xs font-bold uppercase tracking-widest text-[#8CC63F] flex items-center gap-1.5">
                   <Sparkles className="h-3.5 w-3.5 text-[#8CC63F]" />
-                  Gemini Agritech Advisory
+                  Gramonnati Market Advisory
                 </span>
                 <span className="text-[10px] bg-white/10 text-gray-200 px-2.5 py-0.5 rounded-full">
                   Real-time APMC Feed
@@ -510,7 +510,7 @@ export default function Marketplace() {
                 className="w-full bg-[#8CC63F] hover:bg-[#7cb337] text-[#122619] py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5"
               >
                 <Sparkles className="h-3.5 w-3.5" />
-                <span>Refresh AI Market Forecast</span>
+                <span>Refresh Market Forecast</span>
               </button>
             </div>
           </div>
@@ -681,7 +681,7 @@ export default function Marketplace() {
                   <CheckCircle2 className="h-4 w-4 text-[#2d6a4f]" /> Order Confirmed & Stored
                 </span>
                 <h3 className="text-xl font-serif text-[#183925] font-bold mt-1">
-                  Gramonnati Rural Rise Mandi Commodity Receipt #{confirmedOrder.id}
+                  Gramonnati RuralRise1 Mandi Commodity Receipt #{confirmedOrder.id}
                 </h3>
               </div>
               <button 
@@ -740,7 +740,7 @@ export default function Marketplace() {
 
               <div className="mb-6">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-[#2d6a4f]">
-                  Gramonnati Rural Rise Direct Purchase
+                  Gramonnati RuralRise1 Direct Purchase
                 </span>
                 <h3 className="text-2xl font-serif text-[#183925] font-bold mt-1">
                   {buyingProduct.name}
@@ -957,7 +957,7 @@ export default function Marketplace() {
 
                 <a
                   href={`https://wa.me/${(contactingProduct.farmerPhone || '+919822011223').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
-                    `Namaste ${contactingProduct.farmerName}, I am interested in buying ${contactingProduct.name} (Grade ${contactingProduct.qualityGrade}) listed on Gramonnati Rural Rise at ₹${contactingProduct.pricePerKg}/kg. Please share availability for dispatch.`
+                    `Namaste ${contactingProduct.farmerName}, I am interested in buying ${contactingProduct.name} (Grade ${contactingProduct.qualityGrade}) listed on Gramonnati RuralRise1 at ₹${contactingProduct.pricePerKg}/kg. Please share availability for dispatch.`
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"

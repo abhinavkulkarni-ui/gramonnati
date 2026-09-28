@@ -638,7 +638,7 @@ app.get('/api/admin/stats', (req, res) => {
   });
 });
 
-// Gemini AI Routes
+// Agricultural Expert System Routes
 app.post('/api/ai/job-match', async (req, res) => {
   const { userProfile, availableJobs } = req.body;
   

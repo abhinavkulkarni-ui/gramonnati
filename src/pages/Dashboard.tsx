@@ -55,6 +55,8 @@ import {
   requestDeviceGps, 
   calculateHaversineDistance 
 } from '../lib/geoUtils';
+import WeatherForecast from '../components/WeatherForecast';
+import { useLanguage } from '../lib/i18n';
 
 // Fix Leaflet icons
 import L from 'leaflet';
@@ -103,8 +105,9 @@ export default function Dashboard() {
     return saved ? JSON.parse(saved) : null;
   });
 
+  const { t, isMarathi } = useLanguage();
   const [showOnboarding, setShowOnboarding] = useState(false);
-  type DashboardTab = 'jobs' | 'location' | 'products' | 'yields' | 'earnings' | 'admin';
+  type DashboardTab = 'jobs' | 'weather' | 'location' | 'products' | 'yields' | 'earnings' | 'admin';
   const [activeTab, setActiveTab] = useState<DashboardTab>('jobs');
   const [areaFilter, setAreaFilter] = useState<string>('All');
   
@@ -1082,13 +1085,20 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className="bg-white/95 backdrop-blur-sm p-5 rounded-2xl border border-[#d8e5da] shadow-xs flex items-center justify-between">
+              <div 
+                onClick={() => setActiveTab('weather')}
+                className="bg-white/95 backdrop-blur-sm p-5 rounded-2xl border border-[#d8e5da] shadow-xs flex items-center justify-between cursor-pointer hover:border-[#2d6a4f] transition group"
+                title="Click to view detailed real-time weather & agro advisory"
+              >
                 <div>
                   <span className="text-xs text-[#55695b] font-medium block">Atmospheric Weather</span>
-                  <span className="text-2xl font-bold font-serif text-[#14532d]">27°C</span>
-                  <span className="text-[11px] text-amber-700 font-semibold block mt-0.5">Dry humidity for harvest</span>
+                  <span className="text-2xl font-bold font-serif text-[#14532d]">Live Feed</span>
+                  <span className="text-[11px] text-[#2d6a4f] font-semibold flex items-center gap-1 mt-0.5 group-hover:underline">
+                    <span>{isMarathi ? 'सविस्तर हवामान पहा' : 'View Full Agro Forecast'}</span>
+                    <ArrowRight className="h-3 w-3 text-[#2d6a4f]" />
+                  </span>
                 </div>
-                <div className="h-12 w-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-xs">
+                <div className="h-12 w-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-xs group-hover:scale-105 transition">
                   <CloudSun className="h-6 w-6" />
                 </div>
               </div>
@@ -1107,7 +1117,7 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* AI Advisory */}
+        {/* Agricultural Advisory */}
         {aiSuggestion && (
           <div className="bg-white border border-[#dce8de] rounded-3xl p-5 mb-8 shadow-sm flex items-start gap-4">
             <div className="h-10 w-10 rounded-xl bg-[#183925] text-[#8CC63F] flex items-center justify-center shrink-0 shadow-sm">
@@ -1115,9 +1125,9 @@ export default function Dashboard() {
             </div>
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-bold text-[#183925] text-sm">AgriConnect Intelligent Advisory</h3>
+                <h3 className="font-bold text-[#183925] text-sm">AgriConnect Agricultural Advisory</h3>
                 <span className="text-[10px] bg-[#eef5ee] text-[#2d6a4f] font-bold px-2 py-0.5 rounded-full">
-                  AI Real-Time
+                  Live Expert System
                 </span>
               </div>
               <p className="text-[#55695b] text-xs sm:text-sm leading-relaxed">
@@ -1140,7 +1150,19 @@ export default function Dashboard() {
                 }`}
               >
                 <Briefcase className="h-3.5 w-3.5" />
-                <span>Available Jobs ({filteredJobs.length})</span>
+                <span>{isMarathi ? `उपलब्ध कामे (${filteredJobs.length})` : `Available Jobs (${filteredJobs.length})`}</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('weather')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 ${
+                  activeTab === 'weather' 
+                    ? 'bg-[#183925] text-white shadow-sm' 
+                    : 'bg-white text-[#55695b] hover:bg-gray-100 border border-[#d8e0d9]'
+                }`}
+              >
+                <CloudSun className="h-3.5 w-3.5 text-amber-500" />
+                <span>{isMarathi ? 'हवामान व शेती नियोजन' : 'Weather & Agro Planning'}</span>
               </button>
 
               <button
@@ -1152,7 +1174,7 @@ export default function Dashboard() {
                 }`}
               >
                 <MapPin className="h-3.5 w-3.5" />
-                <span>Farm Locations & GPS</span>
+                <span>{isMarathi ? 'शेती स्थान व जीपीएस' : 'Farm Locations & GPS'}</span>
               </button>
 
               <button
@@ -1164,7 +1186,7 @@ export default function Dashboard() {
                 }`}
               >
                 <Package className="h-3.5 w-3.5" />
-                <span>Produce & Mandi Rates ({products.length})</span>
+                <span>{isMarathi ? `शेतीमाल व बाजारभाव (${products.length})` : `Produce & Mandi Rates (${products.length})`}</span>
               </button>
 
               <button
@@ -1176,7 +1198,7 @@ export default function Dashboard() {
                 }`}
               >
                 <CreditCard className="h-3.5 w-3.5" />
-                <span>My Work & Wages</span>
+                <span>{isMarathi ? 'माझी कामे व मजुरी' : 'My Work & Wages'}</span>
               </button>
             </>
           ) : user.role === 'farmer' ? (
@@ -1190,7 +1212,19 @@ export default function Dashboard() {
                 }`}
               >
                 <Briefcase className="h-3.5 w-3.5" />
-                <span>Post Jobs & Workforce</span>
+                <span>{isMarathi ? 'काम पोस्ट करा व मजूर शोधा' : 'Post Jobs & Workforce'}</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('weather')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 ${
+                  activeTab === 'weather' 
+                    ? 'bg-[#183925] text-white shadow-sm' 
+                    : 'bg-white text-[#55695b] hover:bg-gray-100 border border-[#d8e0d9]'
+                }`}
+              >
+                <CloudSun className="h-3.5 w-3.5 text-amber-500" />
+                <span>{isMarathi ? 'हवामान व शेती नियोजन' : 'Weather & Agro Planning'}</span>
               </button>
 
               <button
@@ -1202,7 +1236,7 @@ export default function Dashboard() {
                 }`}
               >
                 <Package className="h-3.5 w-3.5" />
-                <span>Product Listing & Sales ({products.length})</span>
+                <span>{isMarathi ? `उत्पादन यादी व थेट विक्री (${products.length})` : `Product Listing & Sales (${products.length})`}</span>
               </button>
 
               <button
@@ -1214,7 +1248,7 @@ export default function Dashboard() {
                 }`}
               >
                 <TrendingUp className="h-3.5 w-3.5" />
-                <span>Harvest Yields & Demand</span>
+                <span>{isMarathi ? 'पीक उत्पादन व मागणी' : 'Harvest Yields & Demand'}</span>
               </button>
             </>
           ) : (
@@ -1228,7 +1262,19 @@ export default function Dashboard() {
                 }`}
               >
                 <Briefcase className="h-3.5 w-3.5" />
-                <span>Field Job Postings</span>
+                <span>{isMarathi ? 'शेती कामे नोंदणी' : 'Field Job Postings'}</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('weather')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 ${
+                  activeTab === 'weather' 
+                    ? 'bg-[#183925] text-white shadow-sm' 
+                    : 'bg-white text-[#55695b] hover:bg-gray-100 border border-[#d8e0d9]'
+                }`}
+              >
+                <CloudSun className="h-3.5 w-3.5 text-amber-500" />
+                <span>{isMarathi ? 'हवामान अंदाज' : 'Weather Forecast'}</span>
               </button>
 
               <button
@@ -1240,7 +1286,7 @@ export default function Dashboard() {
                 }`}
               >
                 <Package className="h-3.5 w-3.5" />
-                <span>Produce Orders</span>
+                <span>{isMarathi ? 'शेतीमाल ऑर्डर्स' : 'Produce Orders'}</span>
               </button>
 
               <button
@@ -1252,7 +1298,7 @@ export default function Dashboard() {
                 }`}
               >
                 <TrendingUp className="h-3.5 w-3.5" />
-                <span>Market Yields</span>
+                <span>{isMarathi ? 'बाजार आवक व भाव' : 'Market Yields'}</span>
               </button>
 
               <button
@@ -1264,7 +1310,7 @@ export default function Dashboard() {
                 }`}
               >
                 <ShieldCheck className="h-3.5 w-3.5" />
-                <span>APMC State Admin Oversight</span>
+                <span>{isMarathi ? 'बाजार समिती प्रशासन' : 'APMC State Admin Oversight'}</span>
               </button>
             </>
           )}
@@ -2390,6 +2436,16 @@ export default function Dashboard() {
             </div>
 
           </div>
+        )}
+
+        {/* ============================================================ */}
+        {/* TAB: REAL-TIME WEATHER FORECAST & AGRICULTURAL PLANNING     */}
+        {/* ============================================================ */}
+        {activeTab === 'weather' && (
+          <WeatherForecast 
+            userLocation={user.location || user.district} 
+            userCoordinates={userGps} 
+          />
         )}
 
       </div>

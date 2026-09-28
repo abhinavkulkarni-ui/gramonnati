@@ -22,11 +22,11 @@ export function exportProfileToPdf(user: UserProfile) {
   doc.setFillColor(234, 179, 8); // Golden Amber accent strip (#eab308)
   doc.rect(0, 24, pageWidth, 2.5, 'F');
 
-  // Rural Rise Brand Name in Header
+  // RuralRise1 Brand Name in Header
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(16);
-  doc.text('GRAMONNATI RURAL RISE', 14, 12);
+  doc.text('GRAMONNATI RURALRISE1', 14, 12);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
@@ -278,7 +278,7 @@ export function exportProfileToPdf(user: UserProfile) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(70, 85, 70);
-  doc.text('This credential dossier confirms active registration on the Gramonnati Rural Rise Agri-Tech platform.', 20, curY + 14);
+  doc.text('This credential dossier confirms active registration on the Gramonnati RuralRise1 Agri-Tech platform.', 20, curY + 14);
   doc.text('Authorized for farm-gate produce loading, APMC market yard trading, and tractor-guided wage settlement.', 20, curY + 19);
   doc.text('Official URL: https://gramonnati.org  |  Toll-Free Support: 1800-889-RURAL', 20, curY + 24);
 
@@ -288,7 +288,7 @@ export function exportProfileToPdf(user: UserProfile) {
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
-  doc.text('Gramonnati Rural Rise © 2026  •  Empowering Rural Economy, Farm Gate Commerce & Transparent Mandis', 14, pageHeight - 3);
+  doc.text('Gramonnati RuralRise1 © 2026  •  Empowering Rural Economy, Farm Gate Commerce & Transparent Mandis', 14, pageHeight - 3);
 
   // Save the PDF
   const sanitizedName = (user.name || 'Member').replace(/[^a-zA-Z0-9]/g, '_');

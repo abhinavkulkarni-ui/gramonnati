@@ -173,7 +173,7 @@ export default function Home() {
             {/* Eyebrow badge with RuralRise Logo */}
             <div className="inline-flex items-center gap-2 bg-white/90 backdrop-blur-sm text-[#14532d] border border-[#bbf7d0] px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider shadow-xs">
               <RuralRiseLogo size="sm" showText={false} />
-              <span>Gramonnati • Rural Rise Initiative</span>
+              <span>Gramonnati • RuralRise1 Initiative</span>
             </div>
 
             {/* Main Title with Serif Accent */}
@@ -326,7 +326,7 @@ export default function Home() {
                     <CheckCircle2 className="h-3.5 w-3.5 text-[#2d6a4f]" /> Harvest Produce Selling Dashboard
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-[#2d6a4f]" /> Gemini AI Crop Health Doctor
+                    <CheckCircle2 className="h-3.5 w-3.5 text-[#2d6a4f]" /> Crop Health Doctor & Diagnostics
                   </li>
                 </ul>
               </div>
@@ -591,7 +591,7 @@ export default function Home() {
           <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-emerald-400/20 rounded-full blur-3xl pointer-events-none"></div>
 
           <div className="space-y-3 relative z-10 max-w-xl">
-            <span className="text-xs font-bold uppercase tracking-widest text-[#fde047]">Join Gramonnati Rural Rise</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-[#fde047]">Join Gramonnati RuralRise1</span>
             <h3 className="text-3xl sm:text-4xl font-serif font-bold text-white">
               Ready to modernize your farm and expand your reach?
             </h3>

@@ -174,7 +174,7 @@ export default function OnboardingModal({ user, isOpen, onComplete, onClose }: O
     return {
       ...user,
       id: currentId,
-      name: name.trim() || 'Rural Rise Member',
+      name: name.trim() || 'RuralRise1 Member',
       role,
       phone: phone.trim(),
       location: location.trim(),
@@ -257,7 +257,7 @@ export default function OnboardingModal({ user, isOpen, onComplete, onClose }: O
             <RuralRiseLogo size="sm" showText={true} />
           </div>
           <h2 className="text-2xl sm:text-3xl font-serif text-[#14532d] font-bold mt-1">
-            Complete Your Rural Rise Profile
+            Complete Your RuralRise1 Profile
           </h2>
           <p className="text-xs sm:text-sm text-[#496552] mt-1 max-w-lg mx-auto">
             Please fill in your authentic farming, wage, and banking details to activate instant jobs, direct mandi payouts, and crop dispatch.

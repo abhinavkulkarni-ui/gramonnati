@@ -220,7 +220,7 @@ export default function Profile() {
     if (!user) throw new Error('No user');
     return {
       ...user,
-      name: name.trim() || 'Rural Rise Member',
+      name: name.trim() || 'RuralRise1 Member',
       phone: phone.trim(),
       location: location.trim(),
       district: district.trim(),

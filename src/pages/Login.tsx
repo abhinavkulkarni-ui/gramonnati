@@ -514,7 +514,7 @@ export default function Login() {
     }
   };
 
-  // 1-Click Fast Demo Logins for instant evaluation
+  // Quick Demo Profiles for instant login access
   const handleQuickDemo = (demoRole: UserRole) => {
     setLoading(true);
     const mockProfiles = {
@@ -603,7 +603,7 @@ export default function Login() {
             Gramonnati
           </h2>
           <span className="text-xs font-semibold text-amber-700 uppercase tracking-wider">
-            Rural Rise Unified Platform
+            RuralRise1 Unified Platform
           </span>
           <p className="text-[#496552] text-xs sm:text-sm mt-1 max-w-sm">
             {isLogin 
@@ -930,33 +930,36 @@ export default function Login() {
           <span>Sign In with Google ({role === 'farmer' ? 'Farmer' : role === 'laborer' ? 'Laborer' : 'Admin'})</span>
         </button>
 
-        {/* Instant 1-Click Fast Preview Profiles */}
+        {/* Instant Fast Demo Profiles */}
         <div className="mt-4 pt-3 border-t border-[#e9efe9]">
           <span className="block text-[11px] font-bold text-center text-[#496552] mb-2 flex items-center justify-center gap-1.5">
             <Zap className="h-3.5 w-3.5 text-amber-600" />
-            <span>Instant Role Logins (1-Click Evaluation)</span>
+            <span>Demo Profiles (Instant Demo Login)</span>
           </span>
           <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
               onClick={() => handleQuickDemo('farmer')}
               className="py-1.5 px-2 bg-[#f4f8f4] hover:bg-[#eaf4ea] border border-[#d2e2d5] rounded-xl text-[11px] font-bold text-[#14532d] transition"
+              title="Demo Farmer Account (Balasaheb Patil)"
             >
-              🌾 Farmer
+              🌾 Demo Farmer
             </button>
             <button
               type="button"
               onClick={() => handleQuickDemo('laborer')}
               className="py-1.5 px-2 bg-[#f4f8f4] hover:bg-[#eaf4ea] border border-[#d2e2d5] rounded-xl text-[11px] font-bold text-[#14532d] transition"
+              title="Demo Agricultural Laborer (Santosh Shinde)"
             >
-              🚜 Laborer
+              🚜 Demo Laborer
             </button>
             <button
               type="button"
               onClick={() => handleQuickDemo('admin')}
               className="py-1.5 px-2 bg-[#fffbeb] hover:bg-[#fef3c7] border border-amber-300 rounded-xl text-[11px] font-bold text-amber-900 transition"
+              title="Demo APMC Market Admin (Suresh Kadam)"
             >
-              🏛️ Mandi Admin
+              🏛️ Demo Admin
             </button>
           </div>
         </div>
