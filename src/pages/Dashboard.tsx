@@ -37,7 +37,14 @@ import {
   RefreshCw,
   Mail,
   ArrowUpRight,
-  ArrowRight
+  ArrowRight,
+  ShoppingCart,
+  Tag,
+  Compass,
+  MessageSquare,
+  Check,
+  Printer,
+  Receipt
 } from 'lucide-react';
 import { db, auth } from '../lib/firebase';
 import { sendEmailVerification } from 'firebase/auth';
@@ -144,7 +151,55 @@ export default function Dashboard() {
   const [newProduceDelivery, setNewProduceDelivery] = useState<'farm_pickup' | 'mandi_delivery'>('mandi_delivery');
   const [newProduceOrganic, setNewProduceOrganic] = useState(true);
   const [newProduceLocation, setNewProduceLocation] = useState(user?.location || 'Nashik Mandi Yard');
+  const [newProduceLandmark, setNewProduceLandmark] = useState('Gate #2, Near Niphad Canal Bridge, Shinde Farm');
+  const [newProduceWorkerPrice, setNewProduceWorkerPrice] = useState('28');
+  const [newProduceMinOrder, setNewProduceMinOrder] = useState('5');
+  const [newProducePickupHours, setNewProducePickupHours] = useState('6:30 AM - 11:00 AM & 4:30 PM - 7:30 PM');
+  const [newProduceTaluka, setNewProduceTaluka] = useState('Niphad');
+  const [newProduceDistrict, setNewProduceDistrict] = useState('Nashik');
+  const [newProduceLat, setNewProduceLat] = useState<number>(20.0811);
+  const [newProduceLng, setNewProduceLng] = useState<number>(74.1086);
+  const [detectingProduceGps, setDetectingProduceGps] = useState(false);
+  const [enableWorkerDiscount, setEnableWorkerDiscount] = useState(true);
   const [postingProduce, setPostingProduce] = useState(false);
+
+  const handleDetectProduceGps = () => {
+    if (!navigator.geolocation) {
+      showToast('Geolocation is not supported by your browser');
+      return;
+    }
+    setDetectingProduceGps(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setNewProduceLat(pos.coords.latitude);
+        setNewProduceLng(pos.coords.longitude);
+        setDetectingProduceGps(false);
+        showToast(`📍 Farm GPS captured: ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`);
+      },
+      () => {
+        setDetectingProduceGps(false);
+        showToast('Unable to detect GPS. Using default region coordinates.');
+      },
+      { timeout: 10000, enableHighAccuracy: true }
+    );
+  };
+
+  // Laborer Buy Farm Produce Modal & Order States
+  const [buyingProductForLaborer, setBuyingProductForLaborer] = useState<FarmProduct | null>(null);
+  const [laborerBuyQty, setLaborerBuyQty] = useState<number>(10);
+  const [laborerDeliveryType, setLaborerDeliveryType] = useState<'farm_pickup' | 'mandi_delivery'>('farm_pickup');
+  const [laborerPaymentMode, setLaborerPaymentMode] = useState<'cash_on_pickup' | 'upi' | 'wage_deduction'>('cash_on_pickup');
+  const [laborerBuyerName, setLaborerBuyerName] = useState(user?.name || '');
+  const [laborerBuyerPhone, setLaborerBuyerPhone] = useState(user?.phone || '');
+  const [laborerBuyerVillage, setLaborerBuyerVillage] = useState(user?.location || '');
+  const [confirmedLaborerOrder, setConfirmedLaborerOrder] = useState<ProductOrder | null>(null);
+  const [submittingLaborerOrder, setSubmittingLaborerOrder] = useState(false);
+
+  // Laborer Produce Catalog Filters & Sub-tabs
+  const [produceCategoryFilter, setProduceCategoryFilter] = useState<string>('All');
+  const [produceDistanceFilter, setProduceDistanceFilter] = useState<'all' | '15' | '30'>('all');
+  const [produceSearchQuery, setProduceSearchQuery] = useState<string>('');
+  const [laborerProduceSubTab, setLaborerProduceSubTab] = useState<'catalog' | 'my_orders'>('catalog');
 
   const [toastMsg, setToastMsg] = useState('');
 
@@ -334,8 +389,8 @@ export default function Dashboard() {
     {
       id: 'prod-1',
       farmerId: user?.id || 'farmer-1',
-      farmerName: user?.name || 'Balasaheb Patil Farm',
-      farmerPhone: user?.phone || '+91 98220 11223',
+      farmerName: 'Balasaheb Patil Farm',
+      farmerPhone: '+91 98220 11223',
       name: 'Certified Sharbati Gold Wheat (Grade A+)',
       cropType: 'Wheat',
       category: 'Cereals',
@@ -343,9 +398,16 @@ export default function Dashboard() {
       pricePerKg: 32,
       pricePerQuintal: 3200,
       quantityAvailableKg: 1200,
-      minOrderKg: 50,
-      description: 'Sun-ripened organic Sharbati wheat, low moisture (9.8%), ideal for premium rotis.',
+      minOrderKg: 5,
+      description: 'Sun-ripened organic Sharbati wheat, low moisture (9.8%), ideal for soft rotis. Machine-cleaned and bagged.',
       location: 'Niphad, Nashik, MH',
+      district: 'Nashik',
+      taluka: 'Niphad',
+      lat: 20.0811,
+      lng: 74.1086,
+      farmGateLandmark: 'Gat No. 42, Patil Farm, 200m from Niphad Canal Bridge (Gate #2)',
+      workerConcessionPricePerKg: 28,
+      preferredPickupHours: '6:30 AM - 11:00 AM & 4:30 PM - 7:30 PM',
       mandiBenchmarkRate: 2950,
       imageUrl: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&q=80&w=600',
       harvestDate: '2026-09-10',
@@ -355,9 +417,9 @@ export default function Dashboard() {
     },
     {
       id: 'prod-2',
-      farmerId: user?.id || 'farmer-1',
-      farmerName: user?.name || 'Balasaheb Patil Farm',
-      farmerPhone: user?.phone || '+91 98220 11223',
+      farmerId: 'farmer-2',
+      farmerName: 'Kaveri Agro Fields',
+      farmerPhone: '+91 98220 33445',
       name: 'Desi Hybrid Bajra (Pearl Millet)',
       cropType: 'Bajra',
       category: 'Millets',
@@ -365,9 +427,16 @@ export default function Dashboard() {
       pricePerKg: 26,
       pricePerQuintal: 2600,
       quantityAvailableKg: 2500,
-      minOrderKg: 100,
-      description: 'High-iron, double-sieved pearl millet with 10.5% moisture.',
+      minOrderKg: 5,
+      description: 'High-iron, double-sieved pearl millet with 10.5% moisture. Excellent for nutritious bhakris and porridge.',
       location: 'Baramati, Pune Rural, MH',
+      district: 'Pune',
+      taluka: 'Baramati',
+      lat: 18.1517,
+      lng: 74.5772,
+      farmGateLandmark: 'Opposite Baramati Dairy Cooperative, Shinde Mala Gate',
+      workerConcessionPricePerKg: 22,
+      preferredPickupHours: '7:00 AM - 12:00 PM & 4:00 PM - 8:00 PM',
       mandiBenchmarkRate: 2350,
       imageUrl: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&q=80&w=600',
       harvestDate: '2026-09-12',
@@ -377,9 +446,9 @@ export default function Dashboard() {
     },
     {
       id: 'prod-3',
-      farmerId: user?.id || 'farmer-1',
-      farmerName: user?.name || 'Balasaheb Patil Farm',
-      farmerPhone: user?.phone || '+91 98220 11223',
+      farmerId: 'farmer-3',
+      farmerName: 'Marathwada Farmers Collective',
+      farmerPhone: '+91 94231 77889',
       name: 'Maldandi Jowar (White Sorghum)',
       cropType: 'Jowar',
       category: 'Millets',
@@ -387,14 +456,50 @@ export default function Dashboard() {
       pricePerKg: 42,
       pricePerQuintal: 4200,
       quantityAvailableKg: 1800,
-      minOrderKg: 50,
-      description: 'Heritage GI tagged white bold jowar for soft bhakris.',
-      location: 'Solapur / Marathwada, MH',
+      minOrderKg: 5,
+      description: 'Heritage GI tagged white bold jowar for soft, authentic rural bhakris. Naturally pest-free crop.',
+      location: 'South Solapur, Solapur, MH',
+      district: 'Solapur',
+      taluka: 'Solapur South',
+      lat: 17.6599,
+      lng: 75.9064,
+      farmGateLandmark: 'Beside Gram Panchayat Borewell, Mulegaon Road',
+      workerConcessionPricePerKg: 36,
+      preferredPickupHours: '6:00 AM - 10:30 AM & 5:00 PM - 7:30 PM',
       mandiBenchmarkRate: 3800,
       imageUrl: 'https://images.unsplash.com/photo-1599940824399-b87987ceb72a?auto=format&fit=crop&q=80&w=600',
       harvestDate: '2026-09-14',
       organicCertified: true,
       qualityGrade: 'A+',
+      status: 'active'
+    },
+    {
+      id: 'prod-4',
+      farmerId: 'farmer-4',
+      farmerName: 'Shetkari Samruddhi Yard',
+      farmerPhone: '+91 91588 33441',
+      name: 'High-Protein Yellow Soybean (JS-335)',
+      cropType: 'Soybean',
+      category: 'Oilseeds',
+      variety: 'JS-335 Certified Seed Line',
+      pricePerKg: 48,
+      pricePerQuintal: 4800,
+      quantityAvailableKg: 3200,
+      minOrderKg: 10,
+      description: 'Certified non-GMO yellow soybeans with 40%+ protein content. Machine graded and dust-free.',
+      location: 'Ausa Road, Latur, MH',
+      district: 'Latur',
+      taluka: 'Latur',
+      lat: 18.4088,
+      lng: 76.5604,
+      farmGateLandmark: 'Latur Agro Yard Gate #3, Near Weighbridge',
+      workerConcessionPricePerKg: 42,
+      preferredPickupHours: '8:00 AM - 12:00 PM & 3:00 PM - 7:00 PM',
+      mandiBenchmarkRate: 4620,
+      imageUrl: 'https://images.unsplash.com/photo-1508746829417-e6f548d8d6ed?auto=format&fit=crop&q=80&w=600',
+      harvestDate: '2026-09-15',
+      organicCertified: false,
+      qualityGrade: 'A',
       status: 'active'
     }
   ];
@@ -406,12 +511,16 @@ export default function Dashboard() {
       productName: 'Certified Sharbati Gold Wheat (Grade A+)',
       cropType: 'Wheat',
       farmerId: user?.id || 'farmer-1',
-      farmerName: user?.name || 'Balasaheb Patil Farm',
+      farmerName: 'Balasaheb Patil Farm',
+      farmerPhone: '+91 98220 11223',
       buyerId: 'buyer-201',
       buyerName: 'Swastik Flour Mills Pune',
+      buyerRole: 'trader',
       buyerPhone: '+91 98230 44556',
       deliveryAddress: 'Hadapsar Industrial Estate, Pune, MH',
       deliveryType: 'mandi_delivery',
+      paymentMode: 'upi',
+      pickupCode: 'PKP-9102',
       quantityKg: 500,
       pricePerKg: 32,
       totalAmount: 16000,
@@ -424,17 +533,47 @@ export default function Dashboard() {
       productName: 'Desi Hybrid Bajra (Pearl Millet)',
       cropType: 'Bajra',
       farmerId: user?.id || 'farmer-1',
-      farmerName: user?.name || 'Balasaheb Patil Farm',
+      farmerName: 'Balasaheb Patil Farm',
+      farmerPhone: '+91 98220 11223',
       buyerId: 'buyer-202',
       buyerName: 'Gramin Agro Wholesale',
+      buyerRole: 'trader',
       buyerPhone: '+91 94220 99887',
       deliveryAddress: 'Gultekdi Market Yard, Pune, MH',
       deliveryType: 'farm_pickup',
+      paymentMode: 'cash_on_pickup',
+      pickupCode: 'PKP-3341',
       quantityKg: 800,
       pricePerKg: 26,
       totalAmount: 20800,
       orderDate: '2026-09-17',
       status: 'dispatched'
+    },
+    {
+      id: 'ord-883',
+      productId: 'prod-1',
+      productName: 'Certified Sharbati Gold Wheat (Grade A+)',
+      cropType: 'Wheat',
+      farmerId: 'farmer-1',
+      farmerName: 'Balasaheb Patil Farm',
+      farmerPhone: '+91 98220 11223',
+      buyerId: user?.id || 'laborer-1',
+      buyerName: user?.name || 'Santosh Shinde',
+      buyerRole: 'laborer',
+      buyerPhone: user?.phone || '+91 97654 32109',
+      deliveryAddress: 'Niphad Farm-Gate Self Pickup (Gate #2, Patil Farm)',
+      deliveryType: 'farm_pickup',
+      paymentMode: 'cash_on_pickup',
+      pickupCode: 'PKP-4821',
+      pickupLandmark: 'Gat No. 42, Patil Farm, 200m from Niphad Canal Bridge (Gate #2)',
+      lat: 20.0811,
+      lng: 74.1086,
+      quantityKg: 25,
+      pricePerKg: 28,
+      totalAmount: 700,
+      savingsAmount: 100,
+      orderDate: '2026-09-24',
+      status: 'confirmed'
     }
   ];
 
@@ -673,16 +812,24 @@ export default function Dashboard() {
       farmerId: user.id,
       farmerName: user.name,
       farmerPhone: user.phone || '+91 98220 11223',
+      farmerWhatsapp: user.phone || '+91 98220 11223',
       name: `${newProduceVariety} ${newProduceCrop} (${newProduceGrade})`,
       cropType: newProduceCrop,
-      category: newProduceCrop === 'Wheat' ? 'Cereals' : (newProduceCrop === 'Bajra' || newProduceCrop === 'Jowar' ? 'Millets' : 'Oilseeds'),
+      category: newProduceCrop === 'Wheat' ? 'Cereals' : (newProduceCrop === 'Bajra' || newProduceCrop === 'Jowar' ? 'Millets' : newProduceCrop === 'Soybean' ? 'Oilseeds' : 'Pulses'),
       variety: newProduceVariety,
       pricePerKg: price,
       pricePerQuintal: price * 100,
       quantityAvailableKg: qty,
-      minOrderKg: 50,
-      description: `Harvested directly from ${user.name}'s farm. Cleaned, machine-graded (${newProduceGrade}), moisture tested at ${newProduceMoisture}%. Packaging: ${newProducePackaging}. Delivery: ${newProduceDelivery === 'farm_pickup' ? 'Farm-Gate Pickup' : 'Mandi Transport Included'}.`,
+      minOrderKg: Number(newProduceMinOrder) || 5,
+      description: `Harvested directly from ${user.name}'s farm. Cleaned, machine-graded (${newProduceGrade}), moisture tested at ${newProduceMoisture}%. Packaging: ${newProducePackaging}. Delivery: ${newProduceDelivery === 'farm_pickup' ? 'Farm-Gate Pickup' : 'Mandi Transport Included'}. Pickup Landmark: ${newProduceLandmark || 'Main Farm Gate'}.`,
       location: newProduceLocation,
+      district: newProduceDistrict || 'Nashik',
+      taluka: newProduceTaluka || 'Niphad',
+      lat: newProduceLat || userGps[0] || 20.0811,
+      lng: newProduceLng || userGps[1] || 74.1086,
+      farmGateLandmark: newProduceLandmark || 'Main Farm Gate',
+      workerConcessionPricePerKg: enableWorkerDiscount && newProduceWorkerPrice ? Number(newProduceWorkerPrice) : undefined,
+      preferredPickupHours: newProducePickupHours || '6:30 AM - 11:00 AM & 4:30 PM - 7:30 PM',
       moisturePercent: Number(newProduceMoisture) || 10.2,
       mandiBenchmarkRate: Math.round(price * 95),
       imageUrl: imageMap[newProduceCrop] || imageMap['Wheat'],
@@ -702,6 +849,75 @@ export default function Dashboard() {
     setPostingProduce(false);
     setShowSellProductModal(false);
     showToast(`Produce ${newProd.name} added to Sell Dashboard!`);
+  };
+
+  const handleConfirmLaborerBuy = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!buyingProductForLaborer || !user) return;
+    setSubmittingLaborerOrder(true);
+
+    const unitPrice = (buyingProductForLaborer.workerConcessionPricePerKg && buyingProductForLaborer.workerConcessionPricePerKg > 0)
+      ? buyingProductForLaborer.workerConcessionPricePerKg
+      : buyingProductForLaborer.pricePerKg;
+
+    const total = laborerBuyQty * unitPrice;
+    const standardTotal = laborerBuyQty * buyingProductForLaborer.pricePerKg;
+    const savings = Math.max(0, standardTotal - total);
+    const pickupCode = `PKP-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const newOrder: ProductOrder = {
+      id: `ord-${Date.now().toString().slice(-6)}`,
+      productId: buyingProductForLaborer.id,
+      productName: buyingProductForLaborer.name,
+      cropType: buyingProductForLaborer.cropType,
+      farmerId: buyingProductForLaborer.farmerId,
+      farmerName: buyingProductForLaborer.farmerName,
+      farmerPhone: buyingProductForLaborer.farmerPhone,
+      buyerId: user.id,
+      buyerName: laborerBuyerName || user.name,
+      buyerRole: 'laborer',
+      buyerPhone: laborerBuyerPhone || user.phone || '+91 97654 32109',
+      deliveryAddress: laborerDeliveryType === 'farm_pickup'
+        ? `${buyingProductForLaborer.location} (${buyingProductForLaborer.farmGateLandmark || 'Farm Gate'})`
+        : `${laborerBuyerVillage || user.location} (Local Depot Delivery)`,
+      deliveryType: laborerDeliveryType,
+      paymentMode: laborerPaymentMode,
+      pickupCode,
+      pickupLandmark: buyingProductForLaborer.farmGateLandmark || buyingProductForLaborer.location,
+      lat: buyingProductForLaborer.lat,
+      lng: buyingProductForLaborer.lng,
+      quantityKg: laborerBuyQty,
+      pricePerKg: unitPrice,
+      totalAmount: total,
+      savingsAmount: savings,
+      orderDate: new Date().toISOString().split('T')[0],
+      status: 'confirmed'
+    };
+
+    try {
+      await addDoc(collection(db, 'orders'), newOrder);
+    } catch (err) {
+      console.warn("Order save fallback:", err);
+    }
+
+    // Decrement available quantity locally
+    setProducts(prev => prev.map(p => {
+      if (p.id === buyingProductForLaborer.id) {
+        const remaining = Math.max(0, p.quantityAvailableKg - laborerBuyQty);
+        return {
+          ...p,
+          quantityAvailableKg: remaining,
+          status: remaining === 0 ? 'sold_out' : 'active'
+        };
+      }
+      return p;
+    }));
+
+    setOrders(prev => [newOrder, ...prev]);
+    setConfirmedLaborerOrder(newOrder);
+    setBuyingProductForLaborer(null);
+    setSubmittingLaborerOrder(false);
+    showToast(`Order placed successfully! Pickup Code: ${pickupCode}`);
   };
 
   const handleUpdateOrderStatus = (orderId: string, newStatus: ProductOrder['status']) => {
@@ -1185,8 +1401,11 @@ export default function Dashboard() {
                     : 'bg-white text-[#55695b] hover:bg-gray-100 border border-[#d8e0d9]'
                 }`}
               >
-                <Package className="h-3.5 w-3.5" />
-                <span>{isMarathi ? `शेतीमाल व बाजारभाव (${products.length})` : `Produce & Mandi Rates (${products.length})`}</span>
+                <ShoppingCart className="h-3.5 w-3.5 text-emerald-500" />
+                <span>{isMarathi ? `शेतीमाल खरेदी (${products.length})` : `Buy Farm Produce (${products.length})`}</span>
+                <span className="bg-amber-400 text-amber-950 text-[10px] font-extrabold px-1.5 py-0.5 rounded-md leading-none shadow-2xs">
+                  Worker Rates
+                </span>
               </button>
 
               <button
@@ -1324,6 +1543,45 @@ export default function Dashboard() {
             
             {/* Left: Job Listings & Applications Column */}
             <div className="xl:col-span-7 space-y-6">
+
+              {/* Laborer Quick Access: Buy Farm Produce at Concession Rates */}
+              {user.role === 'laborer' && (
+                <div className="bg-gradient-to-r from-[#14532d] via-[#166534] to-[#15803d] rounded-2xl p-4 sm:p-5 text-white shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-emerald-600/30 relative overflow-hidden">
+                  <div className="absolute right-0 top-0 translate-x-4 -translate-y-4 w-32 h-32 bg-white/5 rounded-full pointer-events-none blur-xl"></div>
+                  <div className="flex items-center gap-3.5 relative z-10">
+                    <div className="h-11 w-11 rounded-2xl bg-amber-400 text-amber-950 flex items-center justify-center shrink-0 font-bold shadow-sm">
+                      <ShoppingCart className="h-6 w-6 text-amber-950" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] uppercase font-black tracking-wider bg-amber-400 text-amber-950 px-2 py-0.5 rounded-md shadow-2xs">
+                          Worker Grain Concession
+                        </span>
+                        <span className="text-xs font-semibold text-emerald-200">Save ₹3 – ₹6 / kg</span>
+                      </div>
+                      <h4 className="text-sm sm:text-base font-serif font-bold text-white mt-1">
+                        {isMarathi ? 'थेट शेतातून धान्य खरेदी (कामगार सवलत दर)' : 'Buy Farm Produce at Special Laborer Rates'}
+                      </h4>
+                      <p className="text-xs text-emerald-100 max-w-md mt-0.5">
+                        {isMarathi
+                          ? 'स्थानिक शेतकऱ्यांकडून गहू, बाजरी, ज्वारी थेट शेतावर कमी दरात (५ ते ५० किलो बॅग) खरेदी करा.'
+                          : 'Local farmers offer farm-gate wheat, bajra & jowar in small household bags (5kg - 50kg) with zero middlemen.'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('products');
+                      setLaborerProduceSubTab('catalog');
+                    }}
+                    className="px-4 py-2.5 bg-amber-400 hover:bg-amber-300 text-amber-950 rounded-xl text-xs font-bold transition whitespace-nowrap shadow-sm hover:shadow-md flex items-center justify-center gap-1.5 self-start sm:self-auto shrink-0 relative z-10 active:scale-95"
+                  >
+                    <span>{isMarathi ? 'शेतीमाल पहा व खरेदी करा' : 'Browse Produce Now'}</span>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
               
               {/* Filter Area Bar */}
               <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-[#e6ebe7]">
@@ -1976,7 +2234,7 @@ export default function Dashboard() {
         )}
 
         {/* ============================================================ */}
-        {/* TAB 3: PRODUCE SALES & MANDI MARKETPLACE                     */}
+        {/* TAB 3: PRODUCE SALES & LABORER BUY DIRECT PORTAL             */}
         {/* ============================================================ */}
         {activeTab === 'products' && (
           <div className="space-y-8">
@@ -1985,178 +2243,610 @@ export default function Dashboard() {
             <div className="bg-white p-6 rounded-3xl border border-[#e6ebe7] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-[#2d6a4f] block mb-1">
-                  {user.role === 'laborer' ? 'Mandi Produce & Wholesale Catalog' : 'Farmer Produce Selling System'}
+                  {user.role === 'laborer' 
+                    ? (isMarathi ? 'थेट शेतीमाल खरेदी पोर्टल' : 'Direct Farm Produce & Grain Purchases')
+                    : (isMarathi ? 'शेतकरी शेतीमाल विक्री प्रणाली' : 'Farmer Produce Selling & Inventory')}
                 </span>
                 <h2 className="text-2xl font-serif text-[#183925] font-bold">
-                  {user.role === 'laborer' ? 'Available Farm Produce & Mandi Rates' : 'Your Harvest Stock & Incoming Orders'}
-                </h2>
-                <p className="text-xs text-[#55695b] mt-0.5">
                   {user.role === 'laborer' 
-                    ? 'Browse harvest grains, legumes, and produce listed by local farmers across regional mandis. Compare APMC wholesale rates and contact growers directly.'
-                    : 'Manage grains (Wheat, Bajra, Jowar), track active buyer orders, and confirm transporter dispatch.'
+                    ? (isMarathi ? 'स्थानिक शेतकऱ्यांकडून थेट धान्य खरेदी' : 'Buy Fresh Farm Produce at Worker-Discount Rates')
+                    : (isMarathi ? 'आपला शेतीमाल साठा व येणाऱ्या ऑर्डर्स' : 'Your Harvest Stock & Incoming Orders')}
+                </h2>
+                <p className="text-xs text-[#55695b] mt-0.5 max-w-2xl">
+                  {user.role === 'laborer' 
+                    ? (isMarathi 
+                        ? 'स्थानिक शेतकऱ्यांकडून थेट ताजे धान्य (गहू, बाजरी, ज्वारी, डाळी) शेतमजूर सवलतीच्या दरात खरेदी करा. शेतावर जाऊन माल पहा, तपासा व कमी दरात घरपोच/बांधावर खरेदी करा.'
+                        : 'Directly purchase wheat, millets, and pulses from local farmers at exclusive worker-discount rates. Inspect grain at the farm gate with transparent distance, zero middlemen, and flexible payment.')
+                    : (isMarathi
+                        ? 'शेतीमाल नोंदवा, शेतमजुरांसाठी सवलतीचा दर ठरवा, येणाऱ्या ऑर्डर्स तपासा व बांधावरून माल सुपूर्द करा.'
+                        : 'List harvest grains, configure community worker rates, track incoming orders from millers and local laborers, and confirm dispatch.')
                   }
                 </p>
               </div>
 
-              {user.role === 'farmer' && (
-                <div className="flex gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                {user.role === 'laborer' ? (
+                  <div className="bg-[#f0f6f1] p-1 rounded-2xl flex items-center gap-1 border border-[#cfe2d2]">
+                    <button
+                      onClick={() => setLaborerProduceSubTab('catalog')}
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                        laborerProduceSubTab === 'catalog'
+                          ? 'bg-[#183925] text-white shadow-xs'
+                          : 'text-[#415b49] hover:bg-white'
+                      }`}
+                    >
+                      <ShoppingCart className="h-3.5 w-3.5" />
+                      <span>{isMarathi ? 'शेतीमाल यादी' : 'Browse Produce'}</span>
+                    </button>
+                    <button
+                      onClick={() => setLaborerProduceSubTab('my_orders')}
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                        laborerProduceSubTab === 'my_orders'
+                          ? 'bg-[#183925] text-white shadow-xs'
+                          : 'text-[#415b49] hover:bg-white'
+                      }`}
+                    >
+                      <Package className="h-3.5 w-3.5" />
+                      <span>{isMarathi ? 'माझ्या ऑर्डर्स' : 'My Orders'} ({orders.filter(o => o.buyerId === user.id || o.buyerRole === 'laborer').length})</span>
+                    </button>
+                  </div>
+                ) : user.role === 'farmer' ? (
                   <button
                     onClick={() => setShowSellProductModal(true)}
                     className="bg-[#183925] hover:bg-[#122c1d] text-white px-5 py-2.5 rounded-full text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
                   >
                     <Plus className="h-4 w-4 text-[#8CC63F]" />
-                    <span>List New Produce</span>
+                    <span>{isMarathi ? '+ नवीन शेतीमाल नोंदवा' : '+ List New Produce'}</span>
                   </button>
-                </div>
-              )}
-            </div>
-
-            {/* Produce Inventory Grid */}
-            <div>
-              <h3 className="text-base font-bold text-[#183925] mb-4 flex items-center gap-2">
-                <Package className="h-4 w-4 text-[#2d6a4f]" />
-                {user.role === 'laborer' ? 'Listed Farm Produce in Regional Mandis' : 'Active Crop Inventory on Marketplace'}
-              </h3>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {products.map((p) => (
-                  <div key={p.id} className="bg-white rounded-3xl overflow-hidden border border-[#e6ebe7] shadow-sm flex flex-col justify-between">
-                    <div>
-                      <div className="relative h-44 bg-gray-100">
-                        <img 
-                          src={p.imageUrl} 
-                          alt={p.name}
-                          referrerPolicy="no-referrer"
-                          onError={(e) => {
-                            e.currentTarget.src = 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&q=80&w=600';
-                          }}
-                          className="w-full h-full object-cover"
-                        />
-                        <span className="absolute top-3 left-3 bg-[#183925]/90 text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
-                          <span>{p.cropType}</span>
-                          <span className="text-amber-300 font-extrabold">• {p.qualityGrade || 'A+'}</span>
-                        </span>
-                        <span className="absolute bottom-3 right-3 bg-white/95 text-[#183925] text-xs font-bold px-2.5 py-1 rounded-lg shadow-xs">
-                          {p.quantityAvailableKg} kg ({Math.round(p.quantityAvailableKg / 50)} bags)
-                        </span>
-                      </div>
-
-                      <div className="p-5">
-                        <div className="flex items-center justify-between gap-1 mb-1">
-                          <h4 className="font-bold text-base text-[#183925] leading-snug">{p.name}</h4>
-                          {p.organicCertified && (
-                            <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full shrink-0">
-                              Residue-Free
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-xs text-[#55695b] block mb-2">{p.variety} • {p.location}</span>
-
-                        <div className="flex items-center gap-2 mb-3 text-[11px] text-[#2d6a4f] bg-[#f2f7f3] px-2.5 py-1 rounded-xl">
-                          <span>Moisture: <strong>{p.moisturePercent || 10.2}%</strong></span>
-                          <span>•</span>
-                          <span>Grade: <strong>{p.qualityGrade || 'A+'} Standard</strong></span>
-                        </div>
-
-                        <div className="bg-[#f7faf7] p-3 rounded-2xl border border-[#e4eee5] flex justify-between items-center text-xs">
-                          <div>
-                            <span className="text-gray-500 block text-[10px]">Price per kg:</span>
-                            <span className="text-base font-bold text-[#2d6a4f]">₹{p.pricePerKg}</span>
-                          </div>
-                          <div className="text-right">
-                            <span className="text-gray-500 block text-[10px]">Per Quintal:</span>
-                            <span className="font-bold font-mono text-[#183925]">₹{p.pricePerQuintal.toLocaleString('en-IN')}</span>
-                          </div>
-                        </div>
-
-                        {user.role === 'laborer' && p.sellerPhone && (
-                          <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
-                            <span className="text-gray-600">Farmer: <strong className="text-[#183925]">{p.sellerName || 'Local Producer'}</strong></span>
-                            <a
-                              href={`tel:${p.sellerPhone}`}
-                              className="text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold px-2.5 py-1 rounded-lg border border-emerald-300 flex items-center gap-1 transition"
-                            >
-                              <Phone className="h-3 w-3" />
-                              <span>Call Farmer</span>
-                            </a>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="p-5 pt-0">
-                      <span className="text-[11px] text-emerald-800 bg-emerald-50 px-3 py-1 rounded-lg font-semibold block text-center">
-                        ✓ Listed on Mandi Marketplace
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                ) : null}
               </div>
             </div>
 
-            {/* Incoming Orders Table (For Farmer & Admin) */}
-            {(user.role === 'farmer' || user.role === 'admin') && (
-              <div className="bg-white rounded-3xl border border-[#e6ebe7] shadow-sm overflow-hidden">
-                <div className="p-5 border-b border-[#e9eae5] bg-[#fcfdfc]">
-                  <h3 className="text-base font-bold text-[#183925] flex items-center gap-2">
-                    <Truck className="h-4 w-4 text-[#2d6a4f]" />
-                    Incoming Orders from Grain Buyers & Mills
-                  </h3>
-                  <p className="text-xs text-[#55695b]">Real-time purchase commitments with delivery tracking</p>
-                </div>
-
-                <div className="divide-y divide-[#f0f3f0]">
-                  {orders.map((ord) => (
-                    <div key={ord.id} className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-[#fafbfa]">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-mono font-bold text-gray-500">#{ord.id}</span>
-                          <h4 className="font-bold text-sm text-[#183925]">{ord.productName}</h4>
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
-                            ord.status === 'dispatched' ? 'bg-sky-100 text-sky-800' : 'bg-emerald-100 text-emerald-800'
-                          }`}>
-                            {ord.status}
-                          </span>
+            {/* LABORER VIEW */}
+            {user.role === 'laborer' ? (
+              <>
+                {laborerProduceSubTab === 'catalog' ? (
+                  <div className="space-y-6">
+                    {/* Worker Concession Highlight Banner */}
+                    <div className="bg-gradient-to-r from-[#14532d] via-[#166534] to-[#15803d] rounded-3xl p-5 text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-md">
+                      <div className="flex items-center gap-3">
+                        <div className="h-11 w-11 rounded-2xl bg-white/10 flex items-center justify-center shrink-0 border border-white/20">
+                          <Tag className="h-6 w-6 text-[#fde047]" />
                         </div>
-
-                        <div className="text-xs text-[#55695b] space-y-1">
-                          <p>Buyer: <strong className="text-[#183925]">{ord.buyerName}</strong> ({ord.buyerPhone})</p>
-                          <div className="flex items-center flex-wrap gap-2">
-                            <span>Destination: {ord.deliveryAddress} • {ord.deliveryType === 'farm_pickup' ? 'Farm-Gate Pickup' : 'Mandi Transport'}</span>
-                            <a
-                              href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(ord.deliveryAddress)}&travelmode=driving`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 px-2 py-0.5 rounded-md border border-amber-300 transition"
-                              title="Open Google Maps route to delivery destination"
-                            >
-                              <ArrowUpRight className="h-3 w-3 text-amber-700" />
-                              <span>Route in Google Maps</span>
-                            </a>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] uppercase font-bold tracking-wider bg-[#fde047] text-[#143d24] px-2 py-0.5 rounded-md">
+                              RuralRise1 Concession
+                            </span>
+                            <span className="text-xs text-emerald-200">Zero Middlemen Markup</span>
                           </div>
+                          <h3 className="text-base sm:text-lg font-serif font-bold text-white mt-0.5">
+                            Special Farm-Gate Rates for Agricultural Workers
+                          </h3>
+                          <p className="text-xs text-emerald-100 max-w-xl">
+                            Local farmers offer ₹3 - ₹6 per kg concession for farm laborers and village families. Inspect the grain right at the farm gate, take small bags (5 kg - 50 kg), and pay in cash or via wage offset!
+                          </p>
                         </div>
-                      </div>
-
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <span className="text-xs text-gray-500 block">{ord.quantityKg} kg ({ord.quantityKg / 100} Qtl)</span>
-                          <span className="text-base font-bold text-[#2d6a4f] font-mono">
-                            ₹{ord.totalAmount.toLocaleString('en-IN')}
-                          </span>
-                        </div>
-
-                        {ord.status === 'confirmed' && (
-                          <button
-                            onClick={() => handleUpdateOrderStatus(ord.id, 'dispatched')}
-                            className="bg-[#183925] hover:bg-[#122c1d] text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1"
-                          >
-                            <Truck className="h-3 w-3" />
-                            <span>Dispatch Stock</span>
-                          </button>
-                        )}
                       </div>
                     </div>
-                  ))}
+
+                    {/* Filter and Search Bar for Laborers */}
+                    <div className="bg-white p-4 rounded-3xl border border-[#e6ebe7] shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                      {/* Category Pills */}
+                      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 lg:pb-0">
+                        {['All', 'Wheat', 'Bajra', 'Jowar', 'Soybean', 'Millets'].map((cat) => (
+                          <button
+                            key={cat}
+                            onClick={() => setProduceCategoryFilter(cat)}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+                              produceCategoryFilter === cat
+                                ? 'bg-[#183925] text-white'
+                                : 'bg-[#f4f7f4] text-[#415b49] hover:bg-[#e8efe9]'
+                            }`}
+                          >
+                            {cat === 'All' ? 'All Crops' : cat}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Distance Filter Pills & Search */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-1 bg-[#f4f7f4] p-1 rounded-xl text-xs font-semibold">
+                          <span className="text-gray-500 px-1 text-[11px]">Distance:</span>
+                          <button
+                            onClick={() => setProduceDistanceFilter('all')}
+                            className={`px-2.5 py-1 rounded-lg transition ${produceDistanceFilter === 'all' ? 'bg-[#183925] text-white font-bold' : 'text-gray-700'}`}
+                          >
+                            All
+                          </button>
+                          <button
+                            onClick={() => setProduceDistanceFilter('15')}
+                            className={`px-2.5 py-1 rounded-lg transition ${produceDistanceFilter === '15' ? 'bg-[#183925] text-white font-bold' : 'text-gray-700'}`}
+                          >
+                            &lt; 15 km
+                          </button>
+                          <button
+                            onClick={() => setProduceDistanceFilter('30')}
+                            className={`px-2.5 py-1 rounded-lg transition ${produceDistanceFilter === '30' ? 'bg-[#183925] text-white font-bold' : 'text-gray-700'}`}
+                          >
+                            &lt; 30 km
+                          </button>
+                        </div>
+
+                        <div className="relative min-w-[200px] flex-1 sm:flex-initial">
+                          <input
+                            type="text"
+                            placeholder="Search crop or village..."
+                            value={produceSearchQuery}
+                            onChange={(e) => setProduceSearchQuery(e.target.value)}
+                            className="w-full pl-3 pr-8 py-1.5 text-xs bg-[#fafdfa] border border-[#d8e0d9] rounded-xl outline-none text-[#183925] focus:border-[#16a34a]"
+                          />
+                          {produceSearchQuery && (
+                            <button
+                              onClick={() => setProduceSearchQuery('')}
+                              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Produce Catalog Grid for Laborers */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {products
+                        .filter(p => {
+                          const matchesCat = produceCategoryFilter === 'All' 
+                            || p.cropType === produceCategoryFilter 
+                            || p.category === produceCategoryFilter
+                            || (produceCategoryFilter === 'Millets' && (p.cropType === 'Bajra' || p.cropType === 'Jowar'));
+                          const matchesSearch = p.name.toLowerCase().includes(produceSearchQuery.toLowerCase())
+                            || p.cropType.toLowerCase().includes(produceSearchQuery.toLowerCase())
+                            || p.location.toLowerCase().includes(produceSearchQuery.toLowerCase())
+                            || (p.farmGateLandmark && p.farmGateLandmark.toLowerCase().includes(produceSearchQuery.toLowerCase()));
+                          if (!matchesCat || !matchesSearch) return false;
+
+                          if (produceDistanceFilter !== 'all') {
+                            const maxDist = Number(produceDistanceFilter);
+                            if (p.lat && p.lng) {
+                              const d = calculateHaversineDistance(userGps[0], userGps[1], p.lat, p.lng);
+                              if (d > maxDist) return false;
+                            }
+                          }
+                          return true;
+                        })
+                        .map((p) => {
+                          const dist = p.lat && p.lng ? calculateHaversineDistance(userGps[0], userGps[1], p.lat, p.lng) : null;
+                          const hasWorkerPrice = p.workerConcessionPricePerKg && p.workerConcessionPricePerKg > 0 && p.workerConcessionPricePerKg < p.pricePerKg;
+                          const savingsPerKg = hasWorkerPrice ? (p.pricePerKg - (p.workerConcessionPricePerKg || p.pricePerKg)) : 0;
+
+                          return (
+                            <div key={p.id} className="bg-white rounded-3xl overflow-hidden border border-[#e6ebe7] hover:border-[#2d6a4f] shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+                              <div>
+                                {/* Image & Tags */}
+                                <div className="relative h-48 bg-gray-100 overflow-hidden">
+                                  <img 
+                                    src={p.imageUrl} 
+                                    alt={p.name}
+                                    referrerPolicy="no-referrer"
+                                    onError={(e) => {
+                                      e.currentTarget.src = 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&q=80&w=600';
+                                    }}
+                                    className="w-full h-full object-cover hover:scale-105 transition duration-500"
+                                  />
+                                  <div className="absolute top-3 left-3 flex flex-col gap-1 items-start">
+                                    <span className="bg-[#183925]/90 backdrop-blur-sm text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 border border-white/20">
+                                      <span>{p.cropType}</span>
+                                      <span className="text-amber-300 font-extrabold">• {p.qualityGrade || 'A+'}</span>
+                                    </span>
+                                    {hasWorkerPrice && (
+                                      <span className="bg-amber-400 text-amber-950 text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-xs">
+                                        Worker Concession: -₹{savingsPerKg}/kg
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* Distance Badge */}
+                                  <div className="absolute bottom-3 right-3 bg-white/95 backdrop-blur-sm text-[#183925] text-xs font-bold px-2.5 py-1 rounded-xl shadow-md flex items-center gap-1 border border-white">
+                                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    <span>{dist !== null ? `${dist.toFixed(1)} km away` : p.location.split(',')[0]}</span>
+                                  </div>
+                                </div>
+
+                                <div className="p-5">
+                                  <div className="flex items-center justify-between gap-1 mb-1">
+                                    <h4 className="font-bold text-base text-[#183925] leading-snug">{p.name}</h4>
+                                    {p.organicCertified && (
+                                      <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full shrink-0">
+                                        Organic
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* Location & Landmark */}
+                                  <div className="text-xs text-[#55695b] space-y-1 mb-3">
+                                    <div className="flex items-center gap-1.5 font-medium text-gray-700">
+                                      <MapPin className="h-3.5 w-3.5 text-[#2d6a4f] shrink-0" />
+                                      <span className="truncate">{p.location}</span>
+                                    </div>
+                                    {p.farmGateLandmark && (
+                                      <p className="text-[11px] text-amber-900 bg-amber-50/80 border border-amber-200/60 p-2 rounded-xl">
+                                        <strong>Pickup Landmark:</strong> {p.farmGateLandmark}
+                                      </p>
+                                    )}
+                                  </div>
+
+                                  {/* Price Card */}
+                                  <div className="bg-[#f7faf7] p-3.5 rounded-2xl border border-[#e4eee5] mb-3">
+                                    <div className="flex items-baseline justify-between">
+                                      <div>
+                                        <span className="text-[10px] text-gray-500 font-semibold block uppercase">
+                                          {hasWorkerPrice ? 'Laborer Concession Price:' : 'Farm Gate Price:'}
+                                        </span>
+                                        <div className="flex items-baseline gap-2">
+                                          <span className="text-xl font-black text-[#15803d]">
+                                            ₹{hasWorkerPrice ? p.workerConcessionPricePerKg : p.pricePerKg}
+                                          </span>
+                                          <span className="text-xs text-gray-500 font-semibold">/ kg</span>
+                                          {hasWorkerPrice && (
+                                            <span className="text-xs line-through text-gray-400">
+                                              ₹{p.pricePerKg}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div className="text-right">
+                                        <span className="text-[10px] text-gray-500 block uppercase font-semibold">Per Quintal:</span>
+                                        <span className="text-xs font-bold font-mono text-[#183925]">
+                                          ₹{((hasWorkerPrice ? p.workerConcessionPricePerKg! : p.pricePerKg) * 100).toLocaleString('en-IN')}
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    <div className="mt-2 pt-2 border-t border-[#e2eae4] flex items-center justify-between text-[11px] text-[#415b49]">
+                                      <span>Available: <strong>{p.quantityAvailableKg} kg</strong></span>
+                                      <span className="text-[#15803d] font-bold">Min: {p.minOrderKg || 5} kg</span>
+                                    </div>
+                                  </div>
+
+                                  {/* Farmer Contact & Timing Info */}
+                                  <div className="pt-2 text-xs border-t border-gray-100 space-y-2">
+                                    <div className="flex items-center justify-between text-[#55695b]">
+                                      <span className="truncate">Farmer: <strong className="text-[#183925]">{p.farmerName}</strong></span>
+                                      <span className="text-[11px] text-gray-500">{p.preferredPickupHours?.split('&')[0] || 'Morning pickup'}</span>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <a
+                                        href={`tel:${p.farmerPhone}`}
+                                        className="py-1.5 px-2 bg-[#f0f6f1] hover:bg-[#e4efe5] text-[#14532d] rounded-xl font-bold text-xs flex items-center justify-center gap-1 border border-[#cfe0d1] transition"
+                                      >
+                                        <Phone className="h-3 w-3 text-[#2d6a4f]" />
+                                        <span>Call Farmer</span>
+                                      </a>
+
+                                      <a
+                                        href={p.lat && p.lng 
+                                          ? getGoogleMapsDirectionsUrl(p.lat, p.lng, p.name, userGps[0], userGps[1])
+                                          : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.location)}`
+                                        }
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="py-1.5 px-2 bg-amber-50 hover:bg-amber-100 text-amber-900 rounded-xl font-bold text-xs flex items-center justify-center gap-1 border border-amber-300 transition"
+                                      >
+                                        <Compass className="h-3 w-3 text-amber-700" />
+                                        <span>Directions</span>
+                                      </a>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Buy Produce Action Button */}
+                              <div className="p-5 pt-0">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setBuyingProductForLaborer(p);
+                                    setLaborerBuyQty(p.minOrderKg || 10);
+                                  }}
+                                  className="w-full bg-[#183925] hover:bg-[#122c1d] text-white py-3 rounded-2xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
+                                >
+                                  <ShoppingCart className="h-4 w-4 text-[#8CC63F]" />
+                                  <span>{isMarathi ? 'शेतीमाल खरेदी करा' : 'Buy / Reserve Produce'}</span>
+                                  <ArrowRight className="h-3.5 w-3.5 text-[#8CC63F]" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                ) : (
+                  /* My Orders & Receipts Sub-Tab */
+                  <div className="space-y-4">
+                    <div className="bg-white p-5 rounded-3xl border border-[#e6ebe7] shadow-sm flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-serif font-bold text-[#183925]">
+                          {isMarathi ? 'माझी खरेदी केलेली उत्पादने व पावत्या' : 'My Farm Produce Purchases & Pickup Slips'}
+                        </h3>
+                        <p className="text-xs text-[#55695b]">
+                          {isMarathi 
+                            ? 'आपण नोंदवलेल्या शेतीमालाच्या पावत्या, पिकअप कोड व शेताचा रस्ता' 
+                            : 'Active orders placed for farm-gate grain pickup with verification codes.'}
+                        </p>
+                      </div>
+                      <span className="text-xs font-bold bg-[#eef5ee] text-[#15803d] px-3 py-1.5 rounded-xl border border-[#cfe2d2]">
+                        {orders.filter(o => o.buyerId === user.id || o.buyerRole === 'laborer').length} Orders Total
+                      </span>
+                    </div>
+
+                    <div className="space-y-3">
+                      {orders
+                        .filter(o => o.buyerId === user.id || o.buyerRole === 'laborer')
+                        .map((ord) => (
+                          <div 
+                            key={ord.id} 
+                            className="bg-white p-5 rounded-3xl border border-[#e2ebe4] shadow-sm hover:border-[#16a34a] transition space-y-3"
+                          >
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-3">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-xs font-bold text-gray-500">#{ord.id}</span>
+                                <h4 className="font-bold text-sm sm:text-base text-[#183925]">{ord.productName}</h4>
+                                <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full uppercase">
+                                  {ord.status}
+                                </span>
+                              </div>
+                              <span className="text-xs text-gray-500 font-medium">
+                                Ordered: {ord.orderDate}
+                              </span>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                              {/* Quantity & Payment */}
+                              <div className="bg-[#f7faf7] p-3 rounded-2xl border border-[#e6eee7]">
+                                <span className="text-gray-500 block text-[10px] uppercase font-semibold">Quantity & Amount</span>
+                                <div className="text-base font-bold text-[#14532d] mt-0.5">
+                                  {ord.quantityKg} kg • ₹{ord.totalAmount.toLocaleString('en-IN')}
+                                </div>
+                                <div className="text-[11px] text-[#15803d] font-semibold mt-1">
+                                  Rate: ₹{ord.pricePerKg}/kg {ord.savingsAmount ? `(Saved ₹${ord.savingsAmount})` : ''}
+                                </div>
+                              </div>
+
+                              {/* Pickup Code Card */}
+                              <div className="bg-amber-50 p-3 rounded-2xl border border-amber-200">
+                                <span className="text-amber-900 block text-[10px] uppercase font-bold">
+                                  🔑 Pickup Verification Code
+                                </span>
+                                <div className="font-mono font-black text-lg text-amber-950 mt-0.5 tracking-wider">
+                                  {ord.pickupCode || 'PKP-4821'}
+                                </div>
+                                <span className="text-[10px] text-amber-800 block">
+                                  Show code to farmer during grain collection
+                                </span>
+                              </div>
+
+                              {/* Fulfillment & Payment Mode */}
+                              <div className="bg-[#f7faf7] p-3 rounded-2xl border border-[#e6eee7]">
+                                <span className="text-gray-500 block text-[10px] uppercase font-semibold">Pickup & Payment</span>
+                                <span className="font-bold text-[#183925] block mt-0.5">
+                                  {ord.deliveryType === 'farm_pickup' ? '🚜 Farm-Gate Self Pickup' : '🚚 Mandi Depot Drop'}
+                                </span>
+                                <span className="text-[11px] text-gray-600 block mt-0.5">
+                                  Payment: {ord.paymentMode === 'cash_on_pickup' ? 'Cash on Pickup' : ord.paymentMode === 'wage_deduction' ? 'Wage Settlement Offset' : 'UPI'}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Location & Farmer Contact */}
+                            <div className="p-3 bg-[#fafcfa] rounded-2xl border border-[#eef3ee] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                              <div>
+                                <span className="text-gray-500 block text-[10px] uppercase font-semibold">Farmer & Pickup Address</span>
+                                <span className="font-bold text-[#183925]">{ord.farmerName}</span> • <span className="text-gray-600">{ord.deliveryAddress}</span>
+                              </div>
+
+                              <div className="flex items-center gap-2 shrink-0">
+                                {ord.farmerPhone && (
+                                  <a
+                                    href={`tel:${ord.farmerPhone}`}
+                                    className="px-3 py-1.5 bg-white text-[#183925] border border-[#d2e0d4] rounded-xl font-bold hover:bg-[#f0f6f1] transition flex items-center gap-1"
+                                  >
+                                    <Phone className="h-3 w-3 text-[#2d6a4f]" />
+                                    <span>Call Farmer</span>
+                                  </a>
+                                )}
+
+                                <a
+                                  href={ord.lat && ord.lng 
+                                    ? getGoogleMapsDirectionsUrl(ord.lat, ord.lng, ord.productName, userGps[0], userGps[1])
+                                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ord.deliveryAddress)}`
+                                  }
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-3 py-1.5 bg-[#183925] text-white rounded-xl font-bold hover:bg-[#122c1d] transition flex items-center gap-1 shadow-xs"
+                                >
+                                  <Compass className="h-3 w-3 text-[#8CC63F]" />
+                                  <span>Directions to Farm</span>
+                                </a>
+
+                                <button
+                                  type="button"
+                                  onClick={() => setConfirmedLaborerOrder(ord)}
+                                  className="px-3 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-300 rounded-xl font-bold hover:bg-emerald-100 transition"
+                                >
+                                  View Receipt
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              /* FARMER & ADMIN VIEW */
+              <div className="space-y-8">
+                {/* Farmer Produce Inventory */}
+                <div>
+                  <h3 className="text-base font-bold text-[#183925] mb-4 flex items-center gap-2">
+                    <Package className="h-4 w-4 text-[#2d6a4f]" />
+                    {isMarathi ? 'बाजारात उपलब्ध आपला शेतीमाल' : 'Active Produce Listed on Mandi Marketplace'}
+                  </h3>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {products.map((p) => (
+                      <div key={p.id} className="bg-white rounded-3xl overflow-hidden border border-[#e6ebe7] shadow-sm flex flex-col justify-between">
+                        <div>
+                          <div className="relative h-44 bg-gray-100">
+                            <img 
+                              src={p.imageUrl} 
+                              alt={p.name}
+                              referrerPolicy="no-referrer"
+                              onError={(e) => {
+                                e.currentTarget.src = 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&q=80&w=600';
+                              }}
+                              className="w-full h-full object-cover"
+                            />
+                            <span className="absolute top-3 left-3 bg-[#183925]/90 text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
+                              <span>{p.cropType}</span>
+                              <span className="text-amber-300 font-extrabold">• {p.qualityGrade || 'A+'}</span>
+                            </span>
+                            <span className="absolute bottom-3 right-3 bg-white/95 text-[#183925] text-xs font-bold px-2.5 py-1 rounded-lg shadow-xs">
+                              {p.quantityAvailableKg} kg ({Math.round(p.quantityAvailableKg / 50)} bags)
+                            </span>
+                          </div>
+
+                          <div className="p-5">
+                            <div className="flex items-center justify-between gap-1 mb-1">
+                              <h4 className="font-bold text-base text-[#183925] leading-snug">{p.name}</h4>
+                              {p.organicCertified && (
+                                <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full shrink-0">
+                                  Residue-Free
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-xs text-[#55695b] block mb-2">{p.variety} • {p.location}</span>
+
+                            {p.farmGateLandmark && (
+                              <p className="text-[11px] text-gray-600 bg-gray-50 p-2 rounded-xl border border-gray-100 mb-2">
+                                📍 <strong>Landmark:</strong> {p.farmGateLandmark}
+                              </p>
+                            )}
+
+                            <div className="bg-[#f7faf7] p-3 rounded-2xl border border-[#e4eee5] flex justify-between items-center text-xs">
+                              <div>
+                                <span className="text-gray-500 block text-[10px]">Price per kg:</span>
+                                <span className="text-base font-bold text-[#2d6a4f]">₹{p.pricePerKg}</span>
+                                {p.workerConcessionPricePerKg && (
+                                  <span className="text-[10px] text-amber-700 font-bold block">
+                                    Worker: ₹{p.workerConcessionPricePerKg}/kg
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-right">
+                                <span className="text-gray-500 block text-[10px]">Per Quintal:</span>
+                                <span className="font-bold font-mono text-[#183925]">₹{p.pricePerQuintal.toLocaleString('en-IN')}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="p-5 pt-0">
+                          <span className="text-[11px] text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl font-semibold block text-center border border-emerald-200">
+                            ✓ Active for Wholesale & Local Laborers
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Incoming Orders Table for Farmer */}
+                <div className="bg-white rounded-3xl border border-[#e6ebe7] shadow-sm overflow-hidden">
+                  <div className="p-5 border-b border-[#e9eae5] bg-[#fcfdfc] flex items-center justify-between">
+                    <div>
+                      <h3 className="text-base font-bold text-[#183925] flex items-center gap-2">
+                        <Truck className="h-4 w-4 text-[#2d6a4f]" />
+                        <span>Incoming Orders (Laborer Farm-Gate & Wholesale)</span>
+                      </h3>
+                      <p className="text-xs text-[#55695b]">Real-time purchase commitments from local workers and wholesale mandi traders</p>
+                    </div>
+                    <span className="text-xs font-bold text-[#14532d] bg-[#f0f6f1] px-3 py-1 rounded-full border border-[#cfe2d2]">
+                      {orders.length} Orders
+                    </span>
+                  </div>
+
+                  <div className="divide-y divide-[#f0f3f0]">
+                    {orders.map((ord) => {
+                      const isLaborerOrder = ord.buyerRole === 'laborer';
+
+                      return (
+                        <div key={ord.id} className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-[#fafbfa]">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs font-mono font-bold text-gray-500">#{ord.id}</span>
+                              <h4 className="font-bold text-sm text-[#183925]">{ord.productName}</h4>
+                              {isLaborerOrder ? (
+                                <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                                  🚜 Local Laborer Pickup
+                                </span>
+                              ) : (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-blue-100 text-blue-800">
+                                  Wholesale Mandi
+                                </span>
+                              )}
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                                ord.status === 'dispatched' ? 'bg-sky-100 text-sky-800' : 'bg-emerald-100 text-emerald-800'
+                              }`}>
+                                {ord.status}
+                              </span>
+                            </div>
+
+                            <div className="text-xs text-[#55695b] space-y-1">
+                              <p>
+                                Buyer: <strong className="text-[#183925]">{ord.buyerName}</strong> ({ord.buyerPhone})
+                                {isLaborerOrder && ord.pickupCode && (
+                                  <span className="ml-2 font-mono font-black text-amber-950 bg-amber-100 px-2 py-0.5 rounded border border-amber-300">
+                                    Code: {ord.pickupCode}
+                                  </span>
+                                )}
+                              </p>
+                              <div className="flex items-center flex-wrap gap-2">
+                                <span>Destination: {ord.deliveryAddress} • {ord.deliveryType === 'farm_pickup' ? 'Farm-Gate Pickup' : 'Mandi Transport'}</span>
+                                {ord.paymentMode && (
+                                  <span className="text-emerald-800 font-semibold">
+                                    • Payment: {ord.paymentMode === 'cash_on_pickup' ? 'Cash on Pickup' : ord.paymentMode === 'wage_deduction' ? 'Wage Settlement Offset' : 'UPI'}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-4">
+                            <div className="text-right">
+                              <span className="text-xs text-gray-500 block">{ord.quantityKg} kg ({ord.quantityKg / 100} Qtl)</span>
+                              <span className="text-base font-bold text-[#2d6a4f] font-mono">
+                                ₹{ord.totalAmount.toLocaleString('en-IN')}
+                              </span>
+                            </div>
+
+                            {ord.status === 'confirmed' && (
+                              <button
+                                onClick={() => handleUpdateOrderStatus(ord.id, 'dispatched')}
+                                className="bg-[#183925] hover:bg-[#122c1d] text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1 shrink-0"
+                              >
+                                <Check className="h-3 w-3" />
+                                <span>{isLaborerOrder ? 'Hand Over Stock' : 'Dispatch Stock'}</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             )}
@@ -2815,10 +3505,76 @@ export default function Dashboard() {
                   </label>
                 </div>
 
-                {/* Location */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-[11px] font-bold text-[#14532d]">Farm / Mandi Yard Location</label>
+                {/* Agricultural Laborer Concession Rate & Small Batches */}
+                <div className="bg-[#f0fdf4] p-3.5 rounded-2xl border border-[#86efac] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="enableWorkerDiscountToggle"
+                        checked={enableWorkerDiscount}
+                        onChange={(e) => setEnableWorkerDiscount(e.target.checked)}
+                        className="h-4 w-4 rounded text-[#15803d] focus:ring-[#15803d]"
+                      />
+                      <label htmlFor="enableWorkerDiscountToggle" className="text-xs font-bold text-[#14532d] cursor-pointer">
+                        Enable Worker / Laborer Concession Price
+                      </label>
+                    </div>
+                    <span className="text-[10px] font-bold bg-[#14532d] text-emerald-200 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                      RuralRise1 Fair Trade
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-[#2d6a4f] leading-relaxed">
+                    Allows local farm laborers & village families to purchase small staple bags (e.g. 5kg - 50kg) directly at your farm gate at a special concession rate with zero middleman commission.
+                  </p>
+
+                  {enableWorkerDiscount && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      <div>
+                        <label className="block text-[11px] font-bold text-[#14532d] mb-1">
+                          Worker Rate (₹/kg)
+                        </label>
+                        <input
+                          type="number"
+                          value={newProduceWorkerPrice}
+                          onChange={(e) => setNewProduceWorkerPrice(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl border border-[#bbf7d0] text-xs font-bold text-[#14532d] bg-white outline-none focus:border-[#15803d]"
+                          placeholder="e.g. 28"
+                          required={enableWorkerDiscount}
+                        />
+                        <span className="text-[10px] text-emerald-700 font-semibold mt-1 block">
+                          Discount: ₹{Math.max(0, Number(newProducePriceKg) - Number(newProduceWorkerPrice))}/kg off mandi rate
+                        </span>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-[#14532d] mb-1">
+                          Worker Min Order (Kg)
+                        </label>
+                        <input
+                          type="number"
+                          value={newProduceMinOrder}
+                          onChange={(e) => setNewProduceMinOrder(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl border border-[#bbf7d0] text-xs font-bold text-[#14532d] bg-white outline-none focus:border-[#15803d]"
+                          placeholder="e.g. 5"
+                          required={enableWorkerDiscount}
+                        />
+                        <span className="text-[10px] text-gray-500 mt-1 block">
+                          Allows small household bags (e.g. 5 kg or 10 kg)
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Farm-Gate Location, Landmark & Pickup Timings */}
+                <div className="space-y-3 bg-[#fbfdfb] p-3.5 rounded-2xl border border-[#dce8de]">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold text-[#14532d] flex items-center gap-1.5">
+                      <MapPin className="h-3.5 w-3.5 text-[#15803d]" />
+                      <span>Farm Pickup Location & Landmark Details</span>
+                    </label>
                     <button
                       type="button"
                       onClick={() => {
@@ -2833,13 +3589,85 @@ export default function Dashboard() {
                       Use Profile Location
                     </button>
                   </div>
-                  <input 
-                    type="text"
-                    value={newProduceLocation}
-                    onChange={(e) => setNewProduceLocation(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-[#d8e0d9] text-xs text-[#14532d] bg-[#fafdfa] outline-none focus:border-[#15803d]"
-                    required
-                  />
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-600 mb-0.5">Village / Mandi Location</label>
+                      <input 
+                        type="text"
+                        value={newProduceLocation}
+                        onChange={(e) => setNewProduceLocation(e.target.value)}
+                        placeholder="e.g. Sukene Village, Niphad, Nashik"
+                        className="w-full px-3 py-2 rounded-xl border border-[#d8e0d9] text-xs text-[#14532d] bg-white outline-none focus:border-[#15803d]"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-600 mb-0.5">Taluka & District</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <input 
+                          type="text"
+                          value={newProduceTaluka}
+                          onChange={(e) => setNewProduceTaluka(e.target.value)}
+                          placeholder="Taluka (Niphad)"
+                          className="w-full px-2.5 py-2 rounded-xl border border-[#d8e0d9] text-xs text-[#14532d] bg-white outline-none focus:border-[#15803d]"
+                        />
+                        <input 
+                          type="text"
+                          value={newProduceDistrict}
+                          onChange={(e) => setNewProduceDistrict(e.target.value)}
+                          placeholder="District (Nashik)"
+                          className="w-full px-2.5 py-2 rounded-xl border border-[#d8e0d9] text-xs text-[#14532d] bg-white outline-none focus:border-[#15803d]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-600 mb-0.5">
+                      Exact Farm-Gate Landmark (Crucial for Laborers & Truck Drivers)
+                    </label>
+                    <input 
+                      type="text"
+                      value={newProduceLandmark}
+                      onChange={(e) => setNewProduceLandmark(e.target.value)}
+                      placeholder="e.g. Gate #2, Near Niphad Canal Bridge, Shinde Farm"
+                      className="w-full px-3 py-2 rounded-xl border border-[#d8e0d9] text-xs text-[#14532d] bg-white outline-none focus:border-[#15803d]"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-600 mb-0.5">Preferred Pickup Hours</label>
+                      <input 
+                        type="text"
+                        value={newProducePickupHours}
+                        onChange={(e) => setNewProducePickupHours(e.target.value)}
+                        placeholder="e.g. 6:30 AM - 11:00 AM & 4:30 PM - 7:30 PM"
+                        className="w-full px-3 py-2 rounded-xl border border-[#d8e0d9] text-xs text-[#14532d] bg-white outline-none focus:border-[#15803d]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-600 mb-0.5">Farm Gate GPS Coordinates</label>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleDetectProduceGps}
+                          disabled={detectingProduceGps}
+                          className="flex-1 py-2 px-3 bg-[#eaf4eb] hover:bg-[#d8eedb] text-[#14532d] border border-[#b2d8b7] rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5"
+                        >
+                          <Compass className={`h-3.5 w-3.5 text-[#15803d] ${detectingProduceGps ? 'animate-spin' : ''}`} />
+                          <span>{detectingProduceGps ? 'Detecting GPS...' : '📍 Capture Farm GPS'}</span>
+                        </button>
+                        <span className="text-[11px] font-mono text-gray-600 px-2 py-1 bg-white border border-gray-200 rounded-lg">
+                          {newProduceLat.toFixed(2)}, {newProduceLng.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="pt-3">
@@ -2860,6 +3688,492 @@ export default function Dashboard() {
                 </div>
 
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ============================================================ */}
+      {/* MODAL: LABORER BUY / RESERVE FARM PRODUCE                    */}
+      {/* ============================================================ */}
+      <AnimatePresence>
+        {buyingProductForLaborer && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-7 shadow-2xl border border-[#d8e5da] my-8 relative overflow-hidden max-h-[90vh] overflow-y-auto"
+            >
+              <button
+                type="button"
+                onClick={() => setBuyingProductForLaborer(null)}
+                className="absolute top-5 right-5 text-gray-400 hover:text-gray-600 p-1.5 rounded-full hover:bg-gray-100 transition"
+              >
+                <X className="h-5 w-5" />
+              </button>
+
+              {/* Modal Header */}
+              <div className="mb-4">
+                <div className="inline-flex items-center gap-1.5 bg-[#fde047]/30 text-amber-950 border border-amber-300 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider mb-2">
+                  <ShoppingCart className="h-3 w-3 text-amber-800" />
+                  <span>Laborer Direct Farm Gate Purchase</span>
+                </div>
+                <h3 className="text-xl sm:text-2xl font-serif text-[#14532d] font-bold">
+                  {buyingProductForLaborer.name}
+                </h3>
+                <p className="text-xs text-[#55695b] mt-0.5">
+                  Direct grain reservation with special agricultural worker concession price.
+                </p>
+              </div>
+
+              {/* Farmer and Farm Info Card */}
+              {(() => {
+                const dist = buyingProductForLaborer.lat && buyingProductForLaborer.lng
+                  ? calculateHaversineDistance(userGps[0], userGps[1], buyingProductForLaborer.lat, buyingProductForLaborer.lng)
+                  : null;
+                const unitPrice = (buyingProductForLaborer.workerConcessionPricePerKg && buyingProductForLaborer.workerConcessionPricePerKg > 0)
+                  ? buyingProductForLaborer.workerConcessionPricePerKg
+                  : buyingProductForLaborer.pricePerKg;
+                const hasWorkerDiscount = buyingProductForLaborer.workerConcessionPricePerKg && buyingProductForLaborer.workerConcessionPricePerKg < buyingProductForLaborer.pricePerKg;
+                const savingsPerKg = hasWorkerDiscount ? (buyingProductForLaborer.pricePerKg - unitPrice) : 0;
+                const totalAmount = laborerBuyQty * unitPrice;
+                const standardTotal = laborerBuyQty * buyingProductForLaborer.pricePerKg;
+                const totalSavings = Math.max(0, standardTotal - totalAmount);
+
+                return (
+                  <form onSubmit={handleConfirmLaborerBuy} className="space-y-4">
+                    {/* Produce Highlight & Distance Banner */}
+                    <div className="bg-[#f7faf7] p-3.5 rounded-2xl border border-[#e2ece3] space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="text-xs font-bold text-[#183925] flex items-center gap-1.5">
+                            <MapPin className="h-3.5 w-3.5 text-[#2d6a4f] shrink-0" />
+                            <span>{buyingProductForLaborer.location}</span>
+                          </div>
+                          {buyingProductForLaborer.farmGateLandmark && (
+                            <p className="text-[11px] text-amber-900 bg-amber-50 border border-amber-200 p-2 rounded-xl mt-1.5">
+                              <strong>Pickup Landmark:</strong> {buyingProductForLaborer.farmGateLandmark}
+                            </p>
+                          )}
+                        </div>
+                        {dist !== null && (
+                          <span className="shrink-0 bg-white border border-[#cfe0d1] text-[#14532d] text-xs font-bold px-2.5 py-1 rounded-xl shadow-2xs flex items-center gap-1">
+                            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span>{dist.toFixed(1)} km</span>
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-between text-xs text-gray-600 pt-2 border-t border-gray-200/80 gap-2">
+                        <span>Farmer: <strong className="text-[#183925]">{buyingProductForLaborer.farmerName}</strong></span>
+                        <span className="text-[11px] text-emerald-800 font-medium">
+                          🕒 {buyingProductForLaborer.preferredPickupHours || 'Morning & Evening Pickup'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Pricing Comparison Box */}
+                    <div className="p-3.5 bg-gradient-to-br from-[#f0fdf4] to-[#dcfce7] border border-[#86efac] rounded-2xl flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-[#166534] tracking-wider block">
+                          {hasWorkerDiscount ? 'Special Worker Rate:' : 'Direct Farm Gate Rate:'}
+                        </span>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-2xl font-black text-[#15803d]">₹{unitPrice}</span>
+                          <span className="text-xs text-gray-600 font-semibold">/ kg</span>
+                          {hasWorkerDiscount && (
+                            <span className="text-xs line-through text-gray-400">
+                              ₹{buyingProductForLaborer.pricePerKg}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {hasWorkerDiscount && (
+                        <div className="text-right">
+                          <span className="bg-amber-400 text-amber-950 text-xs font-extrabold px-2.5 py-1 rounded-full shadow-2xs inline-block">
+                            Save ₹{savingsPerKg}/kg (-{Math.round((savingsPerKg / buyingProductForLaborer.pricePerKg) * 100)}%)
+                          </span>
+                          <span className="text-[10px] text-emerald-800 block mt-0.5">Zero mandi commission</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Quantity Selector with Quick Buttons */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-bold text-[#14532d]">
+                          Select Purchase Quantity (Kilograms)
+                        </label>
+                        <span className="text-[10px] text-gray-500 font-semibold">
+                          Available: {buyingProductForLaborer.quantityAvailableKg} kg
+                        </span>
+                      </div>
+
+                      {/* Quick Quantity Buttons */}
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        {[5, 10, 25, 50, 100].map(q => {
+                          if (q > buyingProductForLaborer.quantityAvailableKg) return null;
+                          return (
+                            <button
+                              key={q}
+                              type="button"
+                              onClick={() => setLaborerBuyQty(q)}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                                laborerBuyQty === q
+                                  ? 'bg-[#183925] text-white shadow-xs'
+                                  : 'bg-[#f0f6f1] text-[#2d6a4f] hover:bg-[#e2ece3] border border-[#cfe0d1]'
+                              }`}
+                            >
+                              {q} kg
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min={buyingProductForLaborer.minOrderKg || 5}
+                          max={buyingProductForLaborer.quantityAvailableKg}
+                          value={laborerBuyQty}
+                          onChange={(e) => setLaborerBuyQty(Math.max(1, Number(e.target.value)))}
+                          className="w-full px-3 py-2.5 rounded-xl border border-[#d8e0d9] text-sm font-bold text-[#14532d] bg-white outline-none focus:border-[#15803d]"
+                          required
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-500">
+                          Kilograms (kg)
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-gray-500 mt-1 block">
+                        Minimum order: {buyingProductForLaborer.minOrderKg || 5} kg • Small household batches accepted
+                      </span>
+                    </div>
+
+                    {/* Order Total & Savings Summary Card */}
+                    <div className="p-3 bg-[#fdf8e8] border border-[#fef08a] rounded-2xl flex items-center justify-between text-xs">
+                      <div>
+                        <span className="text-gray-600 block text-[10px] uppercase font-semibold">Total Payable Amount</span>
+                        <span className="text-xl font-black text-[#14532d] font-mono">
+                          ₹{totalAmount.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                      {totalSavings > 0 && (
+                        <div className="text-right">
+                          <span className="text-emerald-700 block text-[10px] uppercase font-bold">Total Worker Savings</span>
+                          <span className="text-sm font-black text-emerald-800 font-mono bg-emerald-100 px-2 py-0.5 rounded-md inline-block">
+                            +₹{totalSavings.toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Delivery & Collection Method */}
+                    <div>
+                      <label className="block text-[11px] font-bold text-[#14532d] mb-1.5">
+                        Collection & Pickup Preference
+                      </label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <label className={`p-3 rounded-2xl border cursor-pointer transition flex items-start gap-2.5 ${
+                          laborerDeliveryType === 'farm_pickup'
+                            ? 'bg-[#f0f9f2] border-[#22c55e] text-[#14532d] shadow-2xs'
+                            : 'bg-white border-[#dce5de] text-gray-700 hover:bg-[#fafdfa]'
+                        }`}>
+                          <input
+                            type="radio"
+                            name="laborerDeliveryType"
+                            checked={laborerDeliveryType === 'farm_pickup'}
+                            onChange={() => setLaborerDeliveryType('farm_pickup')}
+                            className="mt-0.5 text-[#15803d] focus:ring-[#15803d]"
+                          />
+                          <div>
+                            <span className="font-bold block text-xs">🚜 Farm-Gate Self Pickup</span>
+                            <span className="text-[10px] text-gray-500 block mt-0.5">
+                              Collect directly at farmer's landmark with zero transport fees
+                            </span>
+                          </div>
+                        </label>
+
+                        <label className={`p-3 rounded-2xl border cursor-pointer transition flex items-start gap-2.5 ${
+                          laborerDeliveryType === 'mandi_delivery'
+                            ? 'bg-[#f0f9f2] border-[#22c55e] text-[#14532d] shadow-2xs'
+                            : 'bg-white border-[#dce5de] text-gray-700 hover:bg-[#fafdfa]'
+                        }`}>
+                          <input
+                            type="radio"
+                            name="laborerDeliveryType"
+                            checked={laborerDeliveryType === 'mandi_delivery'}
+                            onChange={() => setLaborerDeliveryType('mandi_delivery')}
+                            className="mt-0.5 text-[#15803d] focus:ring-[#15803d]"
+                          />
+                          <div>
+                            <span className="font-bold block text-xs">🚚 Village Depot Drop</span>
+                            <span className="text-[10px] text-gray-500 block mt-0.5">
+                              Drop at village center / local mandi distribution point
+                            </span>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Payment Mode Selection */}
+                    <div>
+                      <label className="block text-[11px] font-bold text-[#14532d] mb-1.5">
+                        Payment Mode
+                      </label>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                        <label className={`p-2.5 rounded-xl border cursor-pointer transition text-center ${
+                          laborerPaymentMode === 'cash_on_pickup'
+                            ? 'bg-[#f0f9f2] border-[#22c55e] text-[#14532d] font-bold shadow-2xs'
+                            : 'bg-white border-[#dce5de] text-gray-700 hover:bg-[#fafdfa]'
+                        }`}>
+                          <input
+                            type="radio"
+                            name="laborerPaymentMode"
+                            checked={laborerPaymentMode === 'cash_on_pickup'}
+                            onChange={() => setLaborerPaymentMode('cash_on_pickup')}
+                            className="sr-only"
+                          />
+                          <span className="block text-xs">💵 Cash on Pickup</span>
+                          <span className="text-[9px] text-gray-500 block">Inspect grain first</span>
+                        </label>
+
+                        <label className={`p-2.5 rounded-xl border cursor-pointer transition text-center ${
+                          laborerPaymentMode === 'wage_deduction'
+                            ? 'bg-[#f0f9f2] border-[#22c55e] text-[#14532d] font-bold shadow-2xs'
+                            : 'bg-white border-[#dce5de] text-gray-700 hover:bg-[#fafdfa]'
+                        }`}>
+                          <input
+                            type="radio"
+                            name="laborerPaymentMode"
+                            checked={laborerPaymentMode === 'wage_deduction'}
+                            onChange={() => setLaborerPaymentMode('wage_deduction')}
+                            className="sr-only"
+                          />
+                          <span className="block text-xs">🤝 Wage Offset</span>
+                          <span className="text-[9px] text-gray-500 block">Deduct from wages</span>
+                        </label>
+
+                        <label className={`p-2.5 rounded-xl border cursor-pointer transition text-center ${
+                          laborerPaymentMode === 'upi'
+                            ? 'bg-[#f0f9f2] border-[#22c55e] text-[#14532d] font-bold shadow-2xs'
+                            : 'bg-white border-[#dce5de] text-gray-700 hover:bg-[#fafdfa]'
+                        }`}>
+                          <input
+                            type="radio"
+                            name="laborerPaymentMode"
+                            checked={laborerPaymentMode === 'upi'}
+                            onChange={() => setLaborerPaymentMode('upi')}
+                            className="sr-only"
+                          />
+                          <span className="block text-xs">📱 Direct UPI</span>
+                          <span className="text-[9px] text-gray-500 block">GPay / PhonePe</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Buyer Contact Details */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-600 mb-0.5">Your Full Name</label>
+                        <input
+                          type="text"
+                          value={laborerBuyerName}
+                          onChange={(e) => setLaborerBuyerName(e.target.value)}
+                          placeholder="Your name"
+                          className="w-full px-3 py-2 rounded-xl border border-[#d8e0d9] text-xs text-[#14532d] bg-white outline-none focus:border-[#15803d]"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-600 mb-0.5">Phone Number (For Pickup SMS)</label>
+                        <input
+                          type="tel"
+                          value={laborerBuyerPhone}
+                          onChange={(e) => setLaborerBuyerPhone(e.target.value)}
+                          placeholder="+91 97654 32109"
+                          className="w-full px-3 py-2 rounded-xl border border-[#d8e0d9] text-xs text-[#14532d] bg-white outline-none focus:border-[#15803d]"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="pt-2 flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setBuyingProductForLaborer(null)}
+                        className="flex-1 py-3 px-4 rounded-2xl border border-gray-300 text-gray-700 text-xs font-bold hover:bg-gray-100 transition"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={submittingLaborerOrder}
+                        className="flex-2 bg-gradient-to-r from-[#14532d] via-[#15803d] to-[#16a34a] hover:brightness-110 text-white py-3 px-5 rounded-2xl text-xs sm:text-sm font-bold transition shadow-md flex items-center justify-center gap-2 disabled:opacity-75"
+                      >
+                        {submittingLaborerOrder ? (
+                          <div className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
+                        ) : (
+                          <>
+                            <Check className="h-4 w-4 text-[#fde047]" />
+                            <span>Confirm Order & Get Pickup Code</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                );
+              })()}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ============================================================ */}
+      {/* MODAL: CONFIRMED LABORER ORDER RECEIPT                       */}
+      {/* ============================================================ */}
+      <AnimatePresence>
+        {confirmedLaborerOrder && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-[#d8e5da] my-8 relative overflow-hidden max-h-[90vh] overflow-y-auto"
+            >
+              {/* Header with success check */}
+              <div className="text-center pb-4 border-b border-gray-100">
+                <div className="h-12 w-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto mb-2 shadow-xs">
+                  <CheckCircle2 className="h-7 w-7 text-emerald-600" />
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#15803d] block">
+                  Gramonnati RuralRise1 • Mandi Verified
+                </span>
+                <h3 className="text-xl font-serif text-[#14532d] font-bold mt-0.5">
+                  Produce Order Confirmed!
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Receipt #{confirmedLaborerOrder.id} • Date: {confirmedLaborerOrder.orderDate}
+                </p>
+              </div>
+
+              {/* Pickup Verification Code Card */}
+              <div className="my-4 p-4 bg-gradient-to-r from-amber-500/15 via-amber-400/20 to-amber-500/15 border-2 border-amber-500/40 rounded-2xl text-center space-y-1">
+                <span className="text-[11px] font-bold uppercase text-amber-950 tracking-wider block">
+                  🔑 Pickup Verification Code
+                </span>
+                <div className="text-2xl sm:text-3xl font-mono font-black text-amber-950 tracking-widest">
+                  {confirmedLaborerOrder.pickupCode || 'PKP-4821'}
+                </div>
+                <p className="text-[11px] text-amber-900 font-medium">
+                  Show this code to farmer <strong>{confirmedLaborerOrder.farmerName}</strong> when collecting your produce at the farm gate.
+                </p>
+              </div>
+
+              {/* Order Specs Breakdown */}
+              <div className="space-y-2 text-xs mb-4">
+                <div className="p-3 bg-[#f7faf7] rounded-xl border border-[#e4eee5] space-y-1.5">
+                  <div className="flex justify-between items-center text-[#183925]">
+                    <span className="font-semibold text-gray-600">Product:</span>
+                    <strong className="text-right">{confirmedLaborerOrder.productName}</strong>
+                  </div>
+                  <div className="flex justify-between items-center text-[#183925]">
+                    <span className="font-semibold text-gray-600">Quantity & Rate:</span>
+                    <span>{confirmedLaborerOrder.quantityKg} kg @ ₹{confirmedLaborerOrder.pricePerKg}/kg</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-1 border-t border-gray-200">
+                    <span className="font-bold text-[#14532d]">Total Amount:</span>
+                    <span className="text-base font-black font-mono text-[#15803d]">
+                      ₹{confirmedLaborerOrder.totalAmount.toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                  {confirmedLaborerOrder.savingsAmount ? (
+                    <div className="flex justify-between items-center text-emerald-800 text-[11px] font-bold">
+                      <span>Worker Concession Savings:</span>
+                      <span className="bg-emerald-100 px-2 py-0.5 rounded text-emerald-900">
+                        Saved ₹{confirmedLaborerOrder.savingsAmount.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  ) : null}
+                  <div className="flex justify-between items-center text-gray-600 text-[11px] pt-1">
+                    <span>Payment Mode:</span>
+                    <span className="font-semibold text-gray-800">
+                      {confirmedLaborerOrder.paymentMode === 'cash_on_pickup' ? 'Cash on Pickup' : confirmedLaborerOrder.paymentMode === 'wage_deduction' ? 'Wage Settlement Offset' : 'UPI Payment'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Pickup Location & Landmark */}
+                <div className="p-3 bg-[#fdfdfd] rounded-xl border border-gray-200 text-xs space-y-1">
+                  <span className="text-[10px] uppercase font-bold text-gray-500 block">Pickup Location & Landmark</span>
+                  <div className="flex items-start gap-1.5 text-gray-800 font-medium">
+                    <MapPin className="h-4 w-4 text-[#15803d] shrink-0 mt-0.5" />
+                    <span>{confirmedLaborerOrder.pickupLandmark || confirmedLaborerOrder.deliveryAddress}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="space-y-2 pt-2 border-t border-gray-100">
+                <div className="grid grid-cols-2 gap-2">
+                  {confirmedLaborerOrder.farmerPhone && (
+                    <a
+                      href={`tel:${confirmedLaborerOrder.farmerPhone}`}
+                      className="py-2.5 px-3 bg-[#f0f6f1] hover:bg-[#e4efe5] text-[#14532d] rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 border border-[#cfe0d1] transition"
+                    >
+                      <Phone className="h-3.5 w-3.5 text-[#2d6a4f]" />
+                      <span>Call Farmer</span>
+                    </a>
+                  )}
+
+                  <a
+                    href={confirmedLaborerOrder.lat && confirmedLaborerOrder.lng
+                      ? getGoogleMapsDirectionsUrl(confirmedLaborerOrder.lat, confirmedLaborerOrder.lng, confirmedLaborerOrder.productName, userGps[0], userGps[1])
+                      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(confirmedLaborerOrder.pickupLandmark || confirmedLaborerOrder.deliveryAddress)}`
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="py-2.5 px-3 bg-amber-50 hover:bg-amber-100 text-amber-950 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 border border-amber-300 transition"
+                  >
+                    <Compass className="h-3.5 w-3.5 text-amber-700" />
+                    <span>Directions to Farm</span>
+                  </a>
+                </div>
+
+                {confirmedLaborerOrder.farmerPhone && (
+                  <a
+                    href={`https://wa.me/${(confirmedLaborerOrder.farmerPhone || '+919822011223').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+                      `Namaste ${confirmedLaborerOrder.farmerName}, I am ${confirmedLaborerOrder.buyerName}. I have reserved ${confirmedLaborerOrder.quantityKg}kg of ${confirmedLaborerOrder.productName} on Gramonnati RuralRise1. My pickup code is ${confirmedLaborerOrder.pickupCode}. Please let me know what time I can collect at your farm.`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition"
+                  >
+                    <MessageSquare className="h-3.5 w-3.5" />
+                    <span>WhatsApp Farmer with Order Slip</span>
+                  </a>
+                )}
+
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition"
+                  >
+                    <Printer className="h-3.5 w-3.5" />
+                    <span>Print Slip</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setConfirmedLaborerOrder(null)}
+                    className="flex-1 py-2 px-3 bg-[#183925] hover:bg-[#122c1d] text-white rounded-xl font-bold text-xs transition"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
             </motion.div>
           </div>
         )}

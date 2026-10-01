@@ -108,7 +108,16 @@ export interface FarmProduct {
   minOrderKg: number;
   description: string;
   location: string;
+  district?: string;
   taluka?: string;
+  lat?: number;
+  lng?: number;
+  distanceKm?: number;
+  farmGateLandmark?: string;
+  workerConcessionPricePerKg?: number; // Special subsidized/discounted rate for local laborers & farm workers
+  preferredPickupHours?: string;
+  sellerName?: string;
+  sellerPhone?: string;
   moisturePercent?: number;
   mandiBenchmarkRate?: number;
   imageUrl: string;
@@ -125,14 +134,22 @@ export interface ProductOrder {
   cropType: string;
   farmerId: string;
   farmerName: string;
+  farmerPhone?: string;
   buyerId: string;
   buyerName: string;
+  buyerRole?: 'laborer' | 'farmer' | 'trader' | 'buyer';
   buyerPhone: string;
   deliveryAddress: string;
   deliveryType: 'farm_pickup' | 'mandi_delivery';
+  paymentMode?: 'cash_on_pickup' | 'upi' | 'wage_deduction';
+  pickupCode?: string;
+  pickupLandmark?: string;
+  lat?: number;
+  lng?: number;
   quantityKg: number;
   pricePerKg: number;
   totalAmount: number;
+  savingsAmount?: number;
   orderDate: string;
   status: 'confirmed' | 'dispatched' | 'delivered';
 }

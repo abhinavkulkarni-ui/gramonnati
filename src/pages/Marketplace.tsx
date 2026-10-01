@@ -79,7 +79,12 @@ export default function Marketplace() {
       pricePerKg: 32, 
       pricePerQuintal: 3200,
       quantityAvailableKg: 1200, 
-      minOrderKg: 50,
+      minOrderKg: 5,
+      workerConcessionPricePerKg: 28,
+      farmGateLandmark: 'Gat No. 42, Patil Farm, 200m from Niphad Canal Bridge (Gate #2)',
+      lat: 20.0811,
+      lng: 74.1086,
+      preferredPickupHours: '6:30 AM - 11:00 AM & 4:30 PM - 7:30 PM',
       description: 'Sun-ripened, golden-amber Sharbati wheat grains grown with zero synthetic fertilizers. High protein (14.2%), low moisture (9.8%), ideal for premium rotis and artisanal bakeries.',
       location: 'Niphad, Nashik, Maharashtra',
       mandiBenchmarkRate: 2950,
@@ -101,7 +106,12 @@ export default function Marketplace() {
       pricePerKg: 26, 
       pricePerQuintal: 2600,
       quantityAvailableKg: 2500, 
-      minOrderKg: 100,
+      minOrderKg: 5,
+      workerConcessionPricePerKg: 22,
+      farmGateLandmark: 'Opposite Baramati Dairy Cooperative, Shinde Mala Gate',
+      lat: 18.1517,
+      lng: 74.5772,
+      preferredPickupHours: '7:00 AM - 12:00 PM & 4:00 PM - 8:00 PM',
       description: 'High-iron, drought-resilient pearl millet cultivated in alluvial loamy soil. Cleaned, double-sieved, and moisture tested to 10.5%. Rich in calcium and dietary fiber.',
       location: 'Baramati, Pune Rural, Maharashtra',
       mandiBenchmarkRate: 2350,
@@ -123,7 +133,12 @@ export default function Marketplace() {
       pricePerKg: 42, 
       pricePerQuintal: 4200,
       quantityAvailableKg: 1800, 
-      minOrderKg: 50,
+      minOrderKg: 5,
+      workerConcessionPricePerKg: 36,
+      farmGateLandmark: 'Near Latur APMC Yard, Gat 108',
+      lat: 18.4088,
+      lng: 76.5604,
+      preferredPickupHours: '6:00 AM - 11:30 AM & 5:00 PM - 8:00 PM',
       description: 'Celebrated Maharashtra Maldandi Jowar with gleaming pearl-white bold grains. Naturally gluten-free, ground into soft, sweet bhakris. Naturally pest-free crop.',
       location: 'Solapur / Marathwada, Maharashtra',
       mandiBenchmarkRate: 3800,
@@ -145,7 +160,12 @@ export default function Marketplace() {
       pricePerKg: 48, 
       pricePerQuintal: 4800,
       quantityAvailableKg: 3500, 
-      minOrderKg: 200,
+      minOrderKg: 10,
+      workerConcessionPricePerKg: 42,
+      farmGateLandmark: 'Bramhapuri Canal Crossing, Near Sub-Station',
+      lat: 20.9374,
+      lng: 77.7796,
+      preferredPickupHours: '8:00 AM - 1:00 PM & 4:00 PM - 7:00 PM',
       description: 'Certified non-GMO yellow soybeans with 40%+ protein content and 18.5% oil yield. Machine graded, dust-free, and ideal for processing and animal feed.',
       location: 'Latur APMC Yard, Maharashtra',
       mandiBenchmarkRate: 4620,
@@ -167,7 +187,12 @@ export default function Marketplace() {
       pricePerKg: 74, 
       pricePerQuintal: 7400,
       quantityAvailableKg: 5000, 
-      minOrderKg: 500,
+      minOrderKg: 50,
+      workerConcessionPricePerKg: 68,
+      farmGateLandmark: 'Jalna Dry Port Approach Road',
+      lat: 19.8410,
+      lng: 75.8864,
+      preferredPickupHours: '8:00 AM - 6:00 PM',
       description: '30mm+ staple length white cotton, hand-picked with minimal trash (<2.5%). Moisture contained below 7.5%, pristine tensile strength for spinning mills.',
       location: 'Jalna / Aurangabad Mandi, Maharashtra',
       mandiBenchmarkRate: 7150,
@@ -189,7 +214,12 @@ export default function Marketplace() {
       pricePerKg: 115, 
       pricePerQuintal: 11500,
       quantityAvailableKg: 900, 
-      minOrderKg: 25,
+      minOrderKg: 5,
+      workerConcessionPricePerKg: 98,
+      farmGateLandmark: 'Shevgaon Phata, Shrirampur Road',
+      lat: 19.6190,
+      lng: 74.6580,
+      preferredPickupHours: '7:00 AM - 12:00 PM & 4:00 PM - 7:30 PM',
       description: 'Unpolished, chemical-free red gram split dal dried in traditional rural sun-yards. Highest natural nutritive protein retention, authentic desi aroma.',
       location: 'Latur, Maharashtra',
       mandiBenchmarkRate: 10800,
@@ -316,14 +346,30 @@ export default function Marketplace() {
 
   const handleOpenBuy = (product: FarmProduct) => {
     setBuyingProduct(product);
-    setOrderQuantityKg(Math.min(product.minOrderKg || 100, product.quantityAvailableKg));
+    const isLaborer = user?.role === 'laborer';
+    const defaultQty = isLaborer ? (product.minOrderKg || 5) : (product.minOrderKg || 50);
+    setOrderQuantityKg(Math.min(defaultQty, product.quantityAvailableKg));
+    if (isLaborer && user?.name) {
+      setBuyerName(user.name);
+    }
+    if (isLaborer && user?.phone) {
+      setBuyerPhone(user.phone);
+    }
   };
 
   const handleConfirmPurchase = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!buyingProduct) return;
 
-    const total = orderQuantityKg * buyingProduct.pricePerKg;
+    const isLaborer = user?.role === 'laborer';
+    const unitPrice = (isLaborer && buyingProduct.workerConcessionPricePerKg && buyingProduct.workerConcessionPricePerKg > 0)
+      ? buyingProduct.workerConcessionPricePerKg
+      : buyingProduct.pricePerKg;
+    const total = orderQuantityKg * unitPrice;
+    const standardTotal = orderQuantityKg * buyingProduct.pricePerKg;
+    const savings = Math.max(0, standardTotal - total);
+    const pickupCode = `PKP-${Math.floor(1000 + Math.random() * 9000)}`;
+
     const newOrder: ProductOrder = {
       id: `ord-${Date.now()}`,
       productId: buyingProduct.id,
@@ -331,14 +377,21 @@ export default function Marketplace() {
       cropType: buyingProduct.cropType,
       farmerId: buyingProduct.farmerId,
       farmerName: buyingProduct.farmerName,
+      farmerPhone: buyingProduct.farmerPhone,
       buyerId: user?.id || `buyer-${Date.now()}`,
       buyerName: buyerName.trim() || 'Kisan Trader',
+      buyerRole: (user?.role === 'admin' ? 'buyer' : user?.role) as 'laborer' | 'farmer' | 'trader' | 'buyer',
       buyerPhone: buyerPhone.trim(),
-      deliveryAddress: deliveryAddress.trim(),
+      deliveryAddress: deliveryAddress.trim() || buyingProduct.farmGateLandmark || buyingProduct.location,
       deliveryType,
+      pickupCode,
+      pickupLandmark: buyingProduct.farmGateLandmark || buyingProduct.location,
+      lat: buyingProduct.lat,
+      lng: buyingProduct.lng,
       quantityKg: orderQuantityKg,
-      pricePerKg: buyingProduct.pricePerKg,
+      pricePerKg: unitPrice,
       totalAmount: total,
+      savingsAmount: savings,
       orderDate: new Date().toISOString().split('T')[0],
       status: 'confirmed'
     };
@@ -603,9 +656,15 @@ export default function Marketplace() {
                     </span>
                   </div>
 
-                  <h3 className="font-bold text-base text-[#183925] leading-snug mb-2 group-hover:text-[#2d6a4f] transition">
+                  <h3 className="font-bold text-base text-[#183925] leading-snug mb-1.5 group-hover:text-[#2d6a4f] transition">
                     {product.name}
                   </h3>
+
+                  {product.farmGateLandmark && (
+                    <p className="text-[10px] text-amber-950 bg-amber-50 border border-amber-200/80 px-2 py-1 rounded-lg mb-2 leading-tight">
+                      📍 <strong>Pickup Landmark:</strong> {product.farmGateLandmark}
+                    </p>
+                  )}
 
                   <p className="text-xs text-[#55695b] line-clamp-2 leading-relaxed mb-3">
                     {product.description}
@@ -617,7 +676,7 @@ export default function Marketplace() {
                       <Droplet className="h-3 w-3 text-sky-600" /> {product.cropType === 'Wheat' ? '9.8% Moisture' : '10.5% Moisture'}
                     </span>
                     <span className="bg-amber-50 border border-amber-200 text-amber-900 px-2 py-0.5 rounded-md">
-                      Min Order: {product.minOrderKg || 50} kg
+                      Min Order: {user?.role === 'laborer' ? (product.minOrderKg || 5) : (product.minOrderKg || 50)} kg
                     </span>
                     <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded-md">
                       Grade {product.qualityGrade || 'A+'}
@@ -627,12 +686,25 @@ export default function Marketplace() {
                   {/* Pricing Box */}
                   <div className="bg-[#f7faf7] p-3 rounded-2xl border border-[#e4eee5] space-y-1.5">
                     <div className="flex items-baseline justify-between">
-                      <span className="text-[11px] text-gray-500 font-medium">Farm Gate Price:</span>
+                      <span className="text-[11px] text-gray-500 font-medium">
+                        {user?.role === 'laborer' && product.workerConcessionPricePerKg ? 'Laborer Concession Price:' : 'Farm Gate Price:'}
+                      </span>
                       <div className="text-right">
-                        <span className="text-lg font-bold text-[#14532d]">₹{product.pricePerKg}</span>
+                        <span className="text-lg font-bold text-[#14532d]">
+                          ₹{user?.role === 'laborer' && product.workerConcessionPricePerKg ? product.workerConcessionPricePerKg : product.pricePerKg}
+                        </span>
                         <span className="text-xs text-gray-500 font-normal"> / kg</span>
+                        {user?.role === 'laborer' && product.workerConcessionPricePerKg && (
+                          <span className="text-xs line-through text-gray-400 ml-1.5">₹{product.pricePerKg}</span>
+                        )}
                       </div>
                     </div>
+                    {product.workerConcessionPricePerKg && user?.role === 'laborer' && (
+                      <div className="text-[10px] font-bold text-emerald-800 bg-emerald-100/70 px-2 py-0.5 rounded flex items-center justify-between">
+                        <span>Worker Savings:</span>
+                        <span>-₹{product.pricePerKg - product.workerConcessionPricePerKg}/kg</span>
+                      </div>
+                    )}
                     <div className="flex justify-between text-[11px] text-gray-600 border-t border-[#e8f0e9] pt-1">
                       <span>Mandi Quintal Rate:</span>
                       <span className="font-mono font-bold text-[#14532d]">₹{product.pricePerQuintal.toLocaleString('en-IN')} / Qtl</span>
@@ -712,9 +784,23 @@ export default function Marketplace() {
               </div>
             </div>
 
+            {confirmedOrder.pickupCode && (
+              <div className="my-3 p-3 bg-amber-50 border border-amber-300 rounded-xl flex items-center justify-between text-xs">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-amber-900 block">🔑 Pickup Verification Code:</span>
+                  <span className="font-mono font-black text-base text-amber-950">{confirmedOrder.pickupCode}</span>
+                </div>
+                {confirmedOrder.savingsAmount ? (
+                  <span className="bg-emerald-100 text-emerald-800 font-bold px-2.5 py-1 rounded-lg text-xs">
+                    Saved ₹{confirmedOrder.savingsAmount.toLocaleString('en-IN')}!
+                  </span>
+                ) : null}
+              </div>
+            )}
+
             <div className="text-[11px] text-gray-500 bg-[#fbfdfb] p-3 rounded-xl border border-[#dce8de] flex items-center justify-between">
               <span>Farmer Contact: {confirmedOrder.farmerName} • Dispatching from {confirmedOrder.deliveryAddress}</span>
-              <span className="font-bold text-[#2d6a4f]">Status: Payment & Transporter Scheduled</span>
+              <span className="font-bold text-[#2d6a4f]">Status: Confirmed & Pickup Scheduled</span>
             </div>
           </div>
         )}
@@ -780,8 +866,8 @@ export default function Marketplace() {
                   </div>
 
                   {/* Preset quick buttons */}
-                  <div className="flex gap-2 mt-3">
-                    {[50, 100, 250, 500, 1000].filter(q => q <= buyingProduct.quantityAvailableKg).map(q => (
+                  <div className="flex gap-2 mt-3 flex-wrap">
+                    {[5, 10, 25, 50, 100, 250, 500, 1000].filter(q => q <= buyingProduct.quantityAvailableKg).map(q => (
                       <button
                         key={q}
                         type="button"
@@ -867,20 +953,38 @@ export default function Marketplace() {
                 </div>
 
                 {/* Live Total Cost Calculation */}
-                <div className="p-4 bg-[#183925] text-white rounded-2xl space-y-1 text-xs">
-                  <div className="flex justify-between text-gray-300">
-                    <span>Base Price ({orderQuantityKg} kg × ₹{buyingProduct.pricePerKg}):</span>
-                    <span className="font-mono font-bold">₹{(orderQuantityKg * buyingProduct.pricePerKg).toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="flex justify-between text-gray-300">
-                    <span>Mandi Cess & Weighment:</span>
-                    <span className="text-[#8CC63F]">Waived (Gramonnati Partner)</span>
-                  </div>
-                  <div className="flex justify-between text-base font-bold pt-2 border-t border-white/20">
-                    <span>Total Payable:</span>
-                    <span className="text-[#8CC63F] font-mono">₹{(orderQuantityKg * buyingProduct.pricePerKg).toLocaleString('en-IN')}</span>
-                  </div>
-                </div>
+                {(() => {
+                  const isLaborer = user?.role === 'laborer';
+                  const unitPrice = (isLaborer && buyingProduct.workerConcessionPricePerKg && buyingProduct.workerConcessionPricePerKg > 0)
+                    ? buyingProduct.workerConcessionPricePerKg
+                    : buyingProduct.pricePerKg;
+                  const total = orderQuantityKg * unitPrice;
+                  const standardTotal = orderQuantityKg * buyingProduct.pricePerKg;
+                  const savings = Math.max(0, standardTotal - total);
+
+                  return (
+                    <div className="p-4 bg-[#183925] text-white rounded-2xl space-y-1.5 text-xs">
+                      <div className="flex justify-between text-gray-300">
+                        <span>Base Price ({orderQuantityKg} kg × ₹{unitPrice}/kg):</span>
+                        <span className="font-mono font-bold">₹{total.toLocaleString('en-IN')}</span>
+                      </div>
+                      {savings > 0 && (
+                        <div className="flex justify-between text-amber-300 font-bold bg-white/10 px-2 py-1 rounded-lg">
+                          <span>Worker Concession Savings:</span>
+                          <span>-₹{savings.toLocaleString('en-IN')}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-gray-300">
+                        <span>Mandi Cess & Weighment:</span>
+                        <span className="text-[#8CC63F]">Waived (Gramonnati Partner)</span>
+                      </div>
+                      <div className="flex justify-between text-base font-bold pt-2 border-t border-white/20">
+                        <span>Total Payable:</span>
+                        <span className="text-[#8CC63F] font-mono">₹{total.toLocaleString('en-IN')}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Submit button */}
                 <button
